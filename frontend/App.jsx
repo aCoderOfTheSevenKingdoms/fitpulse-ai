@@ -47,19 +47,6 @@ function AppContent() {
     //     fetchUser();
     // }, [dispatch]);
 
-    const handleRoadmapComplete = (roadmapData) => {
-        // Update user profile with data from roadmap
-        const updatedUser = {
-            ...user,
-            weight: roadmapData.weight,
-            height: roadmapData.height,
-            isNewUser: false // User is no longer new after generating roadmap
-            // hasHistory remains false to show empty dashboard stats
-        };
-        dispatch(setUser(updatedUser));
-        navigate('/goals'); // Redirect to goals or profile after roadmap
-    };
-
     const handleLogout = async () => {
         await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, 
             {},
@@ -116,7 +103,7 @@ function AppContent() {
                         <main className="flex-1 p-4 lg:p-8">
                             <Routes>
                                 <Route path="/" element={<HomePage user={user} />} />
-                                <Route path="/roadmap" element={<RoadmapGenerator onComplete={handleRoadmapComplete} />} />
+                                <Route path="/roadmap" element={<RoadmapGenerator/>} />
                                 <Route path="/goals" element={<DailyGoals user={user} />} />
                                 <Route path="/dashboard" element={<ProgressDashboard user={user} />} />
                                 <Route path="/shop" element={<Shop />} />
@@ -144,14 +131,16 @@ function App() {
                     {/* Public */}
                     <Route element={<PublicRoute />}>
                         <Route path="/auth" element={<AuthPage />} />
-                        <Route path='/set-password' element={<SetPasswordPage />} />
                         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
                     </Route>
+
+                    <Route path='/set-password' element={<SetPasswordPage />} />
 
                     {/* Protected */}
                     <Route element={<ProtectedRoute />}>
                         <Route path="/*" element={<AppContent />} />
                     </Route>
+
                 </Routes>
             </AuthProvider>
         </BrowserRouter>

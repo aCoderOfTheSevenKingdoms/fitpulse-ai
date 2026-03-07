@@ -12,7 +12,6 @@ const AuthProvider = ({ children }) => {
         try {
             const response = await axios.get(
                 `${import.meta.env.VITE_BACKEND_URL}/api/auth/me`,
-                {},
                 {withCredentials: true}
             );
             dispatch(setUser(response.data.user));
@@ -23,7 +22,7 @@ const AuthProvider = ({ children }) => {
        };
 
        fetchUser();
-    }, [dispatch]);
+    }, []);
 
     if(loading){
         return (

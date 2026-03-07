@@ -7,6 +7,7 @@ const connectDB = require('./src/db/connect');
 // ROUTES
 const authRoute = require('./src/routes/auth.route');
 const userRoute = require('./src/routes/user.route');
+const planRoute = require('./src/routes/plan.route');
 
 // INJECTING ENV VARIABLES
 dotenv.config();
@@ -25,6 +26,7 @@ app.use(cookieParser());
 
 // ROUTE MIDDLEWARES
 app.use('/api/auth', authRoute);
+app.use('/api/generate-plan', planRoute);
 app.use('/api/user', userRoute);
 
 

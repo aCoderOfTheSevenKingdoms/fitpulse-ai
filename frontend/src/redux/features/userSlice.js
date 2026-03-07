@@ -29,6 +29,9 @@ const userSlice = createSlice({
             state.isAuthenticated = true;
             state.loading = false;
         },
+        onRoadmapGeneration: (state, action) => {
+            state.user = action.payload;
+        },
         clearUser: (state) => {
             state.user = null;
             state.isAuthenticated = false;
@@ -40,6 +43,6 @@ const userSlice = createSlice({
     },
 });
 
-export const { setUser, clearUser, setLoading } = userSlice.actions;
+export const { setUser, onRoadmapGeneration, clearUser, setLoading } = userSlice.actions;
 export default userSlice.reducer;
 

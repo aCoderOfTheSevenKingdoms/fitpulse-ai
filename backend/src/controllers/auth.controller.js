@@ -49,11 +49,7 @@ const googleLogin = async (req, res) => {
                 avatar: picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
                 provider: 'google',
                 providerId: sub,
-            });
-            return res.status(201).json({
-                message: "New user created, please set your password",
-                isPasswordSet: false,
-                user
+                isPasswordSet: false
             });
         }
     
@@ -70,8 +66,8 @@ const googleLogin = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
         res.status(200).json({
-            message: "User logged in successfully",
-            isPasswordSet: true,
+            message: "Google Login Successful",
+            isPasswordSet: user.isPasswordSet,
             user
         });
     } catch (error) {
@@ -100,6 +96,7 @@ const userRegister = async (req,res) => {
             name,
             email,
             password: hashedPassword,
+            isPasswordSet: true,
             age,
             gender,
             provider: 'email',
@@ -170,14 +167,15 @@ const userLogin = async (req,res) => {
 }
 
 const setPassword = async (req,res) => {
-    const { email, password } = req.body;
+    const { password } = req.body;
     try{
 
-        const user = await User.findById({email});
+        const user = await User.findById(req.userId);
         if(!user){
             return res.status(404).json({ message: "User not found" });
         }
         user.password = await bcrypt.hash(password, 10);
+        user.isPasswordSet = true;
         await user.save();
         res.status(200).json({
             message: "Password set successfully"

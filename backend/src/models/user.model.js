@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
         },
         minLength: 8
     },
+    isPasswordSet: {
+        type: Boolean,
+        default: false
+    },
     age: {
         type: Number,
         // required: true,
@@ -89,6 +93,49 @@ const userSchema = new mongoose.Schema({
         // default: "",
         // unique: true
     },
+    activityDetails: {
+        age: String,
+        bmr: String,
+        gender: String,
+        wakeUpTime: String,
+        bedTime: String,
+        jobType: String,
+        commuteDistance: String,
+        dailyWalk: String,
+        doesSmoke: String,
+        doesDrinkAlcohol: String,
+        mealCount: String,
+        doesSkipLunch: String,
+        junkFoodFreq: String,
+        nonVegFreq: String,
+        mealDescription: String,
+        dietType: String,
+        waterIntake: String,
+        workoutPlace: String,
+        calisthenics: String,
+        muscleTraining: String,
+        bodyPart: String,
+        workoutRoutine: String,
+        bloodSugarLevels: String,
+        bloodPressureRange: String,
+        cholestrol: String,
+        medicalConditions: String
+    },
+    goals: [{
+        goalNumber: Number,
+        description: String,
+        metrics: {
+            burnCalories: Number,
+            consumeCalories: Number,
+            sleepHours: Number,
+            proteinGrams: Number,
+            workoutDuration: Number,
+            steps: Number 
+        },
+        viewableFrom: Date,
+        updatableFrom: Date,
+        completedAt: Date,
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

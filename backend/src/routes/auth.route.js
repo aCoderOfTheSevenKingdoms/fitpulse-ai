@@ -20,13 +20,13 @@ const {
     resetPassword 
 } = require('../controllers/auth.controller');
 
-const router = express();
+const router = express.Router();
 
 router.get('/me', authMiddleware, userCheck);
-router.post('/register', rateLimitAuthMiddleware, validateSignupMiddleware, userRegister);
-router.post('/login', rateLimitAuthMiddleware, validateLoginMiddleware, userLogin);
-router.post('/google', rateLimitAuthMiddleware, googleLogin);
-router.post('/set-password', rateLimitAuthMiddleware, setPassword);
+router.post('/register', validateSignupMiddleware, userRegister);
+router.post('/login', validateLoginMiddleware, userLogin);
+router.post('/google', googleLogin);
+router.post('/set-password', authMiddleware, setPassword);
 router.post('/logout', authMiddleware, userLogout);
 router.post('/forgot-password', rateLimitAuthMiddleware, forgotPassword);
 router.post('/reset-password/:token', resetPassword);

@@ -6,6 +6,8 @@ import React, { useState } from 'react';
 import { Lock, ArrowRight, Activity, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
+import { setUser } from "../redux/features/userSlice";
 
 const SetPasswordPage = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -16,8 +18,8 @@ const SetPasswordPage = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
-
-    const { user } = useSelector((state) => state.user);
+    const dispatch = useDispatch();
+    const {user} = useSelector((state) => state.user);
 
     const handleInputChange = (field, value) => {
         setPasswords(prev => ({ ...prev, [field]: value }));
@@ -43,7 +45,6 @@ const SetPasswordPage = () => {
         // Send backend request to store the password
         axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/set-password`,
             {
-                email: user.email,
                 password: passwords.newPassword
             },
             { withCredentials: true }
@@ -51,6 +52,10 @@ const SetPasswordPage = () => {
             .then((res) => {
                 setIsLoading(false);
                 setSuccess(true);
+                dispatch(setUser({
+                    ...user,
+                    isPasswordSet: true
+                }));
             })
             .catch((err) => {
                 setIsLoading(false);
