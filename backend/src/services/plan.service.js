@@ -1,4 +1,4 @@
-const { OpenRouter } = require('@openrouter/sdk');
+const { llmAPIcall } = require('./ai.service');
 
 const generatePrompt = (userActivityDetails) => {
    
@@ -73,34 +73,12 @@ const generatePrompt = (userActivityDetails) => {
     return prompt;    
 }
 
-const apiCall = async (prompt) => {
+const computePlan = async (prompt) => {
     if (!prompt) return null;
 
     try {
-        const openRouter = new OpenRouter({
-            apiKey: process.env.OPENROUTER_API_KEY,
-        });
 
-        const completion = await openRouter.chat.send({
-            chatGenerationParams: {
-                model: "openai/gpt-4o-mini",
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a strict JSON generator. Return only valid JSON."
-                    },
-                    {
-                        role: "user",
-                        content: prompt
-                    }
-                ],
-                temperature: 0.4, // lower = more deterministic
-                max_tokens: 5000, // IMPORTANT for 90 goals
-                stream: false,
-            }
-        });
-
-        const rawOutput = completion.choices[0].message.content;
+        const rawOutput = await llmAPIcall(prompt, 0.4, 5000);
 
         // Attempt to parse JSON
         let parsed;
@@ -146,5 +124,5 @@ const generateGoalDates = (goals) => {
 module.exports = {
     generatePrompt,
     generateGoalDates,
-    apiCall
+    computePlan
 }

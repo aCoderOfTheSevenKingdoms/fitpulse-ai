@@ -1,11 +1,13 @@
 // Services
 const {
     generatePrompt,
-    apiCall,
+    computePlan,
     generateGoalDates
 } = require('../services/plan.service');
 
+// DB Models
 const User = require('../models/user.model');
+const Goal = require('../models/goals.model');
 
 const generatePlan = async (req,res) => {
     
@@ -38,12 +40,13 @@ const generatePlan = async (req,res) => {
         if(user.isNewUser){
             user.isNewUser = false;
         }
+        await user.save();
 
         // Call PromptService to generate prompt
         const planPrompt = generatePrompt(userActivityDetails);
 
         // Fetch roadmap api call
-        const result = await apiCall(planPrompt);
+        const result = await computePlan(planPrompt);
 
         if (!result || !result.goals) {
             return res.status(503).json({
@@ -56,14 +59,23 @@ const generatePlan = async (req,res) => {
         // Set dates for each goal
         const goalsWithDates = generateGoalDates(goals);
 
-        user.goals = goalsWithDates;
+        // Store goals in DB
+        const storedGoals = await Goal.insertMany(
+            goalsWithDates.map(goal => ({
+                ...goal,
+                userId: req.userId
+            }))
+        );
 
-        // Save updates in DB
-        await user.save();
+        if(!storedGoals || storedGoals.length !== 90){
+            return res.json({
+                message: "Some error occured while storing goals in DB"
+            })
+        }
 
         res.status(200).json({
             message: "Roadmap generated successfully✅",
-            goals: user.goals
+            goals: storedGoals
         })
 
     } catch(error) {

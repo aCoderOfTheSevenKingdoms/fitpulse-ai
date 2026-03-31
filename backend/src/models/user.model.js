@@ -120,22 +120,7 @@ const userSchema = new mongoose.Schema({
         bloodPressureRange: String,
         cholestrol: String,
         medicalConditions: String
-    },
-    goals: [{
-        goalNumber: Number,
-        description: String,
-        metrics: {
-            burnCalories: Number,
-            consumeCalories: Number,
-            sleepHours: Number,
-            proteinGrams: Number,
-            workoutDuration: Number,
-            steps: Number 
-        },
-        viewableFrom: Date,
-        updatableFrom: Date,
-        completedAt: Date,
-    }]
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

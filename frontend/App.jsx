@@ -104,7 +104,7 @@ function AppContent() {
                             <Routes>
                                 <Route path="/" element={<HomePage user={user} />} />
                                 <Route path="/roadmap" element={<RoadmapGenerator/>} />
-                                <Route path="/goals" element={<DailyGoals user={user} />} />
+                                <Route path="/goals" element={<DailyGoals />} />
                                 <Route path="/dashboard" element={<ProgressDashboard user={user} />} />
                                 <Route path="/shop" element={<Shop />} />
                                 <Route path="/profile" element={<UserProfile user={user} onUpdateProfile={(data) => dispatch(setUser(data))} onLogout={handleLogout} />} />

@@ -1,5 +1,8 @@
-const express = require('express');
 const dotenv = require('dotenv');
+// INJECTING ENV VARIABLES
+dotenv.config();
+
+const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./src/db/connect');
@@ -8,9 +11,7 @@ const connectDB = require('./src/db/connect');
 const authRoute = require('./src/routes/auth.route');
 const userRoute = require('./src/routes/user.route');
 const planRoute = require('./src/routes/plan.route');
-
-// INJECTING ENV VARIABLES
-dotenv.config();
+const progressRoute = require('./src/routes/progress.route');
 
 // CONNECT TO THE DB
 connectDB();
@@ -27,6 +28,7 @@ app.use(cookieParser());
 // ROUTE MIDDLEWARES
 app.use('/api/auth', authRoute);
 app.use('/api/generate-plan', planRoute);
+app.use('/api/progress', progressRoute);
 app.use('/api/user', userRoute);
 
 

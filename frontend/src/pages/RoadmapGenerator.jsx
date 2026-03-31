@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
-import { User, Utensils, Dumbbell, Activity, ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react';
+import { User, Utensils, Dumbbell, Activity, ChevronRight, ChevronLeft, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { onRoadmapGeneration } from '../redux/features/userSlice';
+import axios from "axios";
+import { useNavigate } from 'react-router-dom';
+import RoadmapGenerationLoader from '../components/RoadmapGenerationLoader';
+import { setActivityDetails, setGoals } from '../redux/features/planSlice';
 
 export const RoadmapGenerator = () => {
     const [step, setStep] = useState(1);
-    const [formData, setFormData] = useState({
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(false);
+
+    const { user } = useSelector((state) => state.user);
+    const { activityDetails } = useSelector((state) => state.plan);
+
+    const initialFormData = (user.isNewUser) ? {
         age: '',
         bmr: '',
         gender: '',
@@ -32,11 +42,14 @@ export const RoadmapGenerator = () => {
         bloodPressureRange: '',
         cholestrol: '',
         medicalConditions: ''
-    });
+    } : activityDetails;
+
+    const [formData, setFormData] = useState(initialFormData);
+
+    const navigate = useNavigate();
 
     const [isCalcOpen,setIsCalcOpen] = useState(false);
 
-    const { user } = useSelector((state) => state.user);
     const dispatch = useDispatch();
 
     const totalSteps = 4;
@@ -64,16 +77,33 @@ export const RoadmapGenerator = () => {
     };
 
     const handleSubmit = async () => {
+        setIsLoading(true);
         console.log('Submitting...', formData);
-        const updatedUser = {
-           ...user,
-           isNewUser: false
-        }
-        dispatch(onRoadmapGeneration(updatedUser));
 
         {/** Make API calls to generate AI roadmap */}
-        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/generate-plan`, formData, { withCredentials: true });
-        console.log('Response:', response.data);
+        axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/generate-plan`, 
+            formData, 
+            { withCredentials: true }
+        ).then((response) => {
+            setIsLoading(false);
+            console.log('Usage: ', response.usage);
+            console.log('Response: ', response.data);
+            const updatedUser = {
+                ...user,
+                hasHistory: true,
+                isNewUser: false
+            }
+            dispatch(setActivityDetails(formData));
+            dispatch(setGoals(response.data.goals));
+            dispatch(onRoadmapGeneration(updatedUser));
+            navigate('/goals');
+        })
+        .catch((error) => {
+            setIsLoading(false);
+            setError(true);
+            console.error('Error generating roadmap:', error);
+            alert('Failed to generate roadmap. Please try again.');
+        })
     };
 
     return (
@@ -577,10 +607,11 @@ export const RoadmapGenerator = () => {
                     {step === totalSteps ? (
                         <button
                             onClick={handleSubmit}
+                            disabled={isLoading}
                             className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl text-sm font-bold shadow-lg shadow-cyan-500/25 transition-all transform hover:scale-105"
                         >
-                            Generate Roadmap
-                            <Activity className="w-4 h-4" />
+                            {isLoading ? 'Generating...' : 'Generate Roadmap'}
+                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
                         </button>
                     ) : (
                         <button
@@ -599,6 +630,11 @@ export const RoadmapGenerator = () => {
 
             </div>
             <BMRcalculator isCalcOpen={isCalcOpen} setIsCalcOpen={setIsCalcOpen} />
+            <RoadmapGenerationLoader
+               isOpen={isLoading || error}
+               isError={error}
+               onRetry={handleSubmit}
+            />
         </div>
     );
 };
