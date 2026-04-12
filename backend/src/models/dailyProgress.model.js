@@ -5,6 +5,10 @@ const dailyProgressSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
+    goalId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Goal'
+    },
     date: {
         type: String,
         required: true
@@ -12,6 +16,21 @@ const dailyProgressSchema = new mongoose.Schema({
     streakCount:{
         type: Number,
         default: 0
+    },
+    effectivenessScore: {
+        type: Number,
+        default: 0
+    },
+    progressInput: {
+        rawData: { // This raw data is to be given to AI
+            mealDescription: String,
+            workoutDescription: String
+        },
+        inputMetrics: {
+            sleepHours: Number,
+            stepCount: Number,
+            workoutDuration: Number
+        }
     },
     totals: {
         caloriesConsumed: { type: Number, default: 0 },

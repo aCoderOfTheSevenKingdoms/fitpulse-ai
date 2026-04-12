@@ -78,17 +78,35 @@ const computePlan = async (prompt) => {
 
     try {
 
-        const rawOutput = await llmAPIcall(prompt, 0.4, 5000);
+        console.log("Calling LLM");
+        const rawOutput = await llmAPIcall(prompt, 0.4, 1500);
+        console.log("LLM returned output");
 
-        // Attempt to parse JSON
+        console.log("Raw length:", rawOutput?.length);
+
+        let cleanedOutput = rawOutput?.trim();
+
+        if (cleanedOutput?.startsWith("```")) {
+        cleanedOutput = cleanedOutput
+            .replace(/```json/g, "")
+            .replace(/```/g, "")
+            .trim();
+        }
+
         let parsed;
 
-        try{
-            parsed = JSON.parse(rawOutput);
-        } catch (error) {
-            console.error("Invalid JSON output from LLM:", error.message);
-            throw new Error("Invalid JSON output from LLM");
+        try {
+        parsed = JSON.parse(cleanedOutput);
+        console.log("JSON parsed successfully ✅");
+        } catch (err) {
+        console.error("Parse failed ❌", err.message);
+        console.log("Preview:", cleanedOutput.slice(0, 300));
+        throw new Error("Invalid JSON output");
         }
+
+        console.log("Type of goals:", typeof parsed.goals);
+        console.log("Is array:", Array.isArray(parsed.goals));
+        console.log("Goals length:", parsed.goals?.length);
 
         // Validate
         if (!parsed.goals || parsed.goals.length !== 90) {
@@ -118,8 +136,6 @@ const generateGoalDates = (goals) => {
         };
     });
 };
-
-
 
 module.exports = {
     generatePrompt,

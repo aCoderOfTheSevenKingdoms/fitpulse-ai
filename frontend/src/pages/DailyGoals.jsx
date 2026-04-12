@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
+    Activity,
     Flame, 
     Lock, 
     CheckCircle, 
@@ -11,7 +12,10 @@ import {
 import { EmptyGoalsState } from '../components/EmptyGoalsState';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
-import {updateGoalProgress,updateStreakAndCalories} from '../redux/features/planSlice';
+import {setGoals, updateGoalProgress} from '../redux/features/planSlice';
+import { setProgressStats } from '../redux/features/progressSlice';
+import RoadmapGenerationLoader from '../components/RoadmapGenerationLoader';
+import { useLocation } from 'react-router-dom';
 
 // Mock Data for "History" (Pre-filled for existing users)
 const HISTORY_GOALS = [
@@ -71,10 +75,17 @@ const getGoalStatus = (goal) => {
 
 export const DailyGoals = () => {
     const dispatch = useDispatch();
-    const { user } = useSelector((state) => state.user);
-    const { goals: planGoals, streakCount, caloriesBurnt } = useSelector((state) => state.plan);
+    const location = useLocation();
 
+    // From redux slices
+    const { user } = useSelector((state) => state.user);
+    const { goals: planGoals, planId } = useSelector((state) => state.plan);
+    const { streakCount, weeklyStats } = useSelector((state) => state.progress);
+
+    // States
     const [isLoading, setIsLoading] = useState(false);
+    const [isPlanGenerationPending, setIsPlanGenerationPending] = useState(false);
+    const [error,setError] = useState(false);
     const [selectedGoal, setSelectedGoal] = useState(null);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [progressInput, setProgressInput] = useState({ 
@@ -84,6 +95,43 @@ export const DailyGoals = () => {
       stepCount: 0,
       workoutDuration: 0
     });
+
+    // Poll every 2 seconds to getPlan api to get goals
+    useEffect(() => {
+      let isMounted = true;
+      if(location.state?.isNewPlan){
+        setIsPlanGenerationPending(true);
+      }
+
+      const interval = setInterval(async () => {
+        try {
+          const res = await axios.get(
+            `${import.meta.env.VITE_BACKEND_URL}/api/plan/get-plan/${planId}`,
+            { withCredentials: true }
+          );
+
+          if (!isMounted) return;
+
+          if (res.data.status === "completed") {
+            dispatch(setGoals(res.data.goals));
+            setIsPlanGenerationPending(false);
+            clearInterval(interval);
+          } 
+          else if (res.data.status === "failed") {
+            setError(true);
+            clearInterval(interval);
+          } 
+
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, 2000);
+
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
+    }, [planId]);
 
     // ----------------------
     // Goals Source (AI or fallback)
@@ -113,8 +161,6 @@ export const DailyGoals = () => {
         }));
     }, [rawGoals]);
 
-    if (!goals.length) return <EmptyGoalsState />;
-
     // ----------------------
     // Stats
     // ----------------------
@@ -123,9 +169,23 @@ export const DailyGoals = () => {
       return goals.filter(goal => goal.status === 'completed').length;
     }, [goals]);
 
-    const totalBurned = useMemo(() => {
-        return caloriesBurnt;
-    }, [caloriesBurnt]);
+    const avgCaloriesBurnt = useMemo(() => {
+ 
+      if (!Array.isArray(weeklyStats) || weeklyStats.length === 0) {
+        return 0;
+      }
+
+      let avg = 0;
+      let total = 0;
+
+      weeklyStats.forEach((statObj) => {
+        total += statObj.caloriesBurnt;
+      })
+
+      avg = total/7;
+ 
+      return avg;
+    }, [weeklyStats]);
 
     const streak = useMemo(() => {
         if (!user?.hasHistory) return 0;
@@ -178,6 +238,8 @@ export const DailyGoals = () => {
                 { withCredentials: true }
             )     
  
+            console.log("API response: ", response.data);
+
             // ----------------------
             // 🔁 REDUX UPDATE PLACEHOLDER
             // ----------------------
@@ -186,10 +248,11 @@ export const DailyGoals = () => {
               completedAt: response.data.completedAt
             }));
 
-            dispatch(updateStreakAndCalories({
+            dispatch(setProgressStats({
               streakCount: response.data.streakCount,
-              caloriesBurnt: response.data.totalCaloriesBurnt
-            }));
+              effectivenessScore: response.data.effectivenessScore,
+              weeklyStats: response.data.weeklyStats || []
+            }))
 
         } catch (err) {
             setIsLoading(false);
@@ -199,6 +262,15 @@ export const DailyGoals = () => {
             handleCloseModal();
         }
     };
+
+    if(isPlanGenerationPending || error){
+      return (<RoadmapGenerationLoader
+        isOpen={true}
+        isError={error}
+      />)
+    }
+
+    if (!goals.length) return <EmptyGoalsState />;
 
     // ----------------------
     // UI
@@ -224,10 +296,10 @@ export const DailyGoals = () => {
             <div className="flex items-center gap-4 bg-slate-900 p-3 rounded-xl border border-slate-800">
               <div className="text-right">
                 <p className="text-xs text-slate-500 uppercase font-bold">
-                  Total Burned
+                  Avg Calories Burnt
                 </p>
                 <p className="text-lg font-bold text-orange-400">
-                  {totalBurned} kcal
+                  {avgCaloriesBurnt} cal
                 </p>
               </div>
               <div className="h-8 w-px bg-slate-800"></div>
@@ -486,7 +558,7 @@ export const DailyGoals = () => {
                 )}
               </div>
             </div>
-          )}
+          )}  
         </div>
     );
 }   

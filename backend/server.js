@@ -27,7 +27,7 @@ app.use(cookieParser());
 
 // ROUTE MIDDLEWARES
 app.use('/api/auth', authRoute);
-app.use('/api/generate-plan', planRoute);
+app.use('/api/plan', planRoute);
 app.use('/api/progress', progressRoute);
 app.use('/api/user', userRoute);
 

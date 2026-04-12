@@ -1,5 +1,8 @@
 const { llmAPIcall } = require('./ai.service');
 const { sanitizeLLMoutput } = require('../utils/progress.utilities');
+const User = require('../models/user.model');
+const DailyProgress = require('../models/dailyProgress.model');
+const mongoose = require("mongoose");
 
 /**
  * This service checks if goals are met or not.
@@ -131,8 +134,153 @@ const generatePrompt = (mealDescription, workoutDescription) => {
     return prompt;
 }
 
+/**
+ * This service calcultes the effectiveness score of a particular user.
+*/
+
+const calculateEffectiveness = async (userId, streakCount) => {
+
+    try{
+
+        /**
+         * From DailyProgress model
+         * Compute how many logs were made in the past 7 days
+         * by the user of _id: userId
+         * The number of logs will be the base score
+        */
+
+        console.log("userId:", userId);
+        console.log("typeof userId:", typeof userId);
+
+        const user = await User.findById(userId);
+        console.log("user:", user);
+
+        const logs = await DailyProgress.aggregate([
+            // 1. Match logs for user in last 7 days
+            {
+                $match: {
+                userId: new mongoose.Types.ObjectId(userId),
+                createdAt: {
+                    $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                }
+                }
+            },
+
+            // 2. Sort by createdAt (earliest first)
+            {
+                $sort: { createdAt: 1 }
+            },
+
+            // 3. Group by day (YYYY-MM-DD)
+            {
+                $group: {
+                _id: {
+                    $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+                },
+                earliestLog: { $first: "$$ROOT" } // first = earliest (because sorted)
+                }
+            },
+
+            // 4. Replace root with the actual document
+            {
+                $replaceRoot: { newRoot: "$earliestLog" }
+            }
+        ]);
+
+        console.log("Progress logs: ", logs);
+
+        const baseScore = logs.length;
+        
+        /**
+         * Compute the difficulty multiplier from the date the user joined.
+         * User model will be used
+        */
+
+        const userCreatedDate = new Date(user.createdAt);
+        console.log("User created at: ", userCreatedDate);
+
+
+        // difference in milliseconds
+        const diffInMs = Date.now() - userCreatedDate;
+        console.log("Diff in ms: ", diffInMs);
+
+        // in days
+        const daysSinceJoined = Math.max(1, Math.floor(diffInMs / (1000 * 60 * 60 * 24)));
+
+        const difficulty = 1 + (daysSinceJoined/30);
+
+        // Compute the final effectiveness score
+        let effectiveness = (baseScore/difficulty)*10; // scale to 0-70
+        if(isNaN(effectiveness)) effectiveness = 0;
+        console.log("Effectivenss score: ", effectiveness);
+        console.log("Streak count: ", streakCount);
+
+        // Add a cap to 100 with extra bonuses
+        let streakBonus = 0;
+        if (streakCount >= 30) {
+            streakBonus += 20;
+        } else if (streakCount >= 10) {
+            streakBonus += 10;
+        } else if (streakCount >= 5) {
+            streakBonus += 5;
+        }
+        console.log("Streak Bonus: ", streakBonus);
+        effectiveness = Math.min(100, effectiveness + streakBonus);
+        console.log("Final Effectiveness score: ", effectiveness);
+
+        return effectiveness;
+
+    } catch (error) {
+        console.error("Error while calculating effectiveness score: ", error);
+        throw error;
+    }
+}
+
+/**
+ * This service fetches the progress stats of the past 7 days 
+ * from the DailyProgress db model wraps them in an array of objects
+ * and returns it.
+*/
+
+const fetchProgressStats = async (userId, logDate) => {
+
+    try{
+       
+        const logDateObj = new Date(logDate);
+
+        const lastWeekDocs = await DailyProgress.find({
+            userId,
+            date: {
+                $gte: new Date(logDateObj.getMilliseconds() - 7 * 24 * 60 * 60 * 1000)
+                    .toISOString()
+                    .split('T')[0]
+            }
+        });
+
+        const stats = lastWeekDocs.map((doc) => {
+            return {
+                day: new Date(doc.date).getDay(),
+                caloriesBurnt: doc.totals.caloriesBurnt,
+                sleepDuration: doc.totals.sleepHours,
+                proteinConsumption: doc.totals.proteinGrams,
+                workoutMinutes: doc.totals.workoutDuration,
+                dailySteps: doc.totals.stepCount,
+                isGoalCompleted: doc.isGoalCompleted
+            }
+        });
+
+        return stats;
+
+    } catch (error) {
+        console.error(error.message);
+        throw new Error("Some error occured while fetching weekly progress stats");
+    }
+}
+
 module.exports = {
     computeMetrics,
     generatePrompt,
-    evaluateProgress
+    evaluateProgress,
+    calculateEffectiveness,
+    fetchProgressStats
 }

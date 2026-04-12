@@ -1,16 +1,18 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
+    planId: null,
     activityDetails: null,
     goals: [],
-    streakCount: 0,
-    caloriesBurnt: 0
 }
 
 const planSlice = createSlice({
     name: 'plan',
     initialState,
     reducers: {
+        setPlanId: (state,action) => {
+            state.planId = action.payload;
+        },
         setActivityDetails: (state,action) => {
            state.activityDetails = action.payload;
         },
@@ -24,10 +26,6 @@ const planSlice = createSlice({
                 : goal
             );
         },
-        updateStreakAndCalories: (state,action) => {
-            state.streakCount = action.payload.streakCount;
-            state.caloriesBurnt = action.payload.caloriesBurnt;
-        },
         clearPlan: (state,action) => {
             state.activityDetails = null;
             state.goals = [];
@@ -35,5 +33,5 @@ const planSlice = createSlice({
     }
 });
 
-export const { setActivityDetails, setGoals, updateGoalProgress, updateStreakAndCalories } = planSlice.actions;
+export const { setActivityDetails, setGoals, updateGoalProgress, setPlanId } = planSlice.actions;
 export default planSlice.reducer;

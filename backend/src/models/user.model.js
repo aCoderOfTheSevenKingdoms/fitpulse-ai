@@ -92,34 +92,6 @@ const userSchema = new mongoose.Schema({
         sparse: true
         // default: "",
         // unique: true
-    },
-    activityDetails: {
-        age: String,
-        bmr: String,
-        gender: String,
-        wakeUpTime: String,
-        bedTime: String,
-        jobType: String,
-        commuteDistance: String,
-        dailyWalk: String,
-        doesSmoke: String,
-        doesDrinkAlcohol: String,
-        mealCount: String,
-        doesSkipLunch: String,
-        junkFoodFreq: String,
-        nonVegFreq: String,
-        mealDescription: String,
-        dietType: String,
-        waterIntake: String,
-        workoutPlace: String,
-        calisthenics: String,
-        muscleTraining: String,
-        bodyPart: String,
-        workoutRoutine: String,
-        bloodSugarLevels: String,
-        bloodPressureRange: String,
-        cholestrol: String,
-        medicalConditions: String
     }
 }, { timestamps: true });
 

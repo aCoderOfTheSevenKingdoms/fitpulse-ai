@@ -1,13 +1,7 @@
-// Services
-const {
-    generatePrompt,
-    computePlan,
-    generateGoalDates
-} = require('../services/plan.service');
-
 // DB Models
 const User = require('../models/user.model');
-const Goal = require('../models/goals.model');
+const Plan = require('../models/plan.model');
+const { planQueue } = require('../queue/queue');
 
 const generatePlan = async (req,res) => {
     
@@ -28,13 +22,14 @@ const generatePlan = async (req,res) => {
             });
         }
 
-        // Put user activity details in DB
-        const allowedFields = Object.keys(user.activityDetails);
-
-        allowedFields.forEach(field => {
-            if(userActivityDetails[field] !== undefined){
-                user.activityDetails[field] = userActivityDetails[field];
-            }
+        /**
+         * Create a new plan document in DB
+         * put the userActivityDetails in the inputData field 
+        */
+        const planDoc = await Plan.create({
+            userId: req.userId,
+            status: "pending",
+            inputData: userActivityDetails
         });
 
         if(user.isNewUser){
@@ -42,40 +37,22 @@ const generatePlan = async (req,res) => {
         }
         await user.save();
 
-        // Call PromptService to generate prompt
-        const planPrompt = generatePrompt(userActivityDetails);
+        // Add the plan generation job to queue
+        await planQueue.add("generate-plan", {
+            userId: req.userId,
+            planId: planDoc._id,
+            inputData: planDoc.inputData
+        }, {
+            attempts: 2,
+            backoff: {
+                type: "exponential",
+                delay: 2000
+            }
+        });
 
-        // Fetch roadmap api call
-        const result = await computePlan(planPrompt);
-
-        if (!result || !result.goals) {
-            return res.status(503).json({
-                message: "LLM API Failure"
-            });
-        }
-
-        const goals = result.goals;
-
-        // Set dates for each goal
-        const goalsWithDates = generateGoalDates(goals);
-
-        // Store goals in DB
-        const storedGoals = await Goal.insertMany(
-            goalsWithDates.map(goal => ({
-                ...goal,
-                userId: req.userId
-            }))
-        );
-
-        if(!storedGoals || storedGoals.length !== 90){
-            return res.json({
-                message: "Some error occured while storing goals in DB"
-            })
-        }
-
-        res.status(200).json({
-            message: "Roadmap generated successfully✅",
-            goals: storedGoals
+        res.json({
+            message: "Roadmap generation inititated ⏳",
+            planId: planDoc._id
         })
 
     } catch(error) {
@@ -87,6 +64,44 @@ const generatePlan = async (req,res) => {
     }    
 }
 
+const getPlan = async (req, res) => {
+    try {
+        const plan = await Plan.findById(req.params.planId);
+
+        if (!plan) {
+            return res.status(404).json({
+                message: "Plan not found"
+            });
+        }
+
+        if (plan.status === "failed") {
+            return res.json({
+                message: "Plan generation failed",
+                status: "failed"
+            });
+        }
+
+        let goals = null;
+
+        if (plan.status === "completed") {
+            const populatedPlan = await plan.populate("result");
+            goals = populatedPlan.result;
+        }
+
+        return res.json({
+            status: plan.status,
+            goals
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: "Error fetching plan",
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
-    generatePlan
+    generatePlan,
+    getPlan
 }

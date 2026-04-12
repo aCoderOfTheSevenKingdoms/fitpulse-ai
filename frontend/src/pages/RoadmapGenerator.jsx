@@ -4,13 +4,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { onRoadmapGeneration } from '../redux/features/userSlice';
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
-import RoadmapGenerationLoader from '../components/RoadmapGenerationLoader';
-import { setActivityDetails, setGoals } from '../redux/features/planSlice';
+import { setActivityDetails, setPlanId } from '../redux/features/planSlice';
 
 export const RoadmapGenerator = () => {
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(false);
 
     const { user } = useSelector((state) => state.user);
     const { activityDetails } = useSelector((state) => state.plan);
@@ -81,7 +79,7 @@ export const RoadmapGenerator = () => {
         console.log('Submitting...', formData);
 
         {/** Make API calls to generate AI roadmap */}
-        axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/generate-plan`, 
+        axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/plan/generate-plan`, 
             formData, 
             { withCredentials: true }
         ).then((response) => {
@@ -94,13 +92,12 @@ export const RoadmapGenerator = () => {
                 isNewUser: false
             }
             dispatch(setActivityDetails(formData));
-            dispatch(setGoals(response.data.goals));
+            dispatch(setPlanId(response.data.planId));
             dispatch(onRoadmapGeneration(updatedUser));
-            navigate('/goals');
+            navigate('/goals', { state: { isNewPlan: true } });
         })
         .catch((error) => {
             setIsLoading(false);
-            setError(true);
             console.error('Error generating roadmap:', error);
             alert('Failed to generate roadmap. Please try again.');
         })
@@ -630,11 +627,6 @@ export const RoadmapGenerator = () => {
 
             </div>
             <BMRcalculator isCalcOpen={isCalcOpen} setIsCalcOpen={setIsCalcOpen} />
-            <RoadmapGenerationLoader
-               isOpen={isLoading || error}
-               isError={error}
-               onRetry={handleSubmit}
-            />
         </div>
     );
 };

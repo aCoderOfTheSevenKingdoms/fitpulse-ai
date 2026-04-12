@@ -4,7 +4,8 @@ const router = express.Router();
 // Middlewares
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const {
-    progressInputValidation
+    progressInputValidation,
+    checkDuplicateLogs
 } = require('../middlewares/progress.middleware');
 
 // Controllers
@@ -14,7 +15,7 @@ const {
     progressHistory
 } = require('../controllers/progress.controller');
 
-router.post('/log', authMiddleware, progressInputValidation, progressLog);
+router.post('/log', authMiddleware, checkDuplicateLogs, progressInputValidation, progressLog);
 router.get('/today', authMiddleware, todayProgress);
 router.get('/history', authMiddleware, progressHistory);
 

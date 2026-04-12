@@ -15,6 +15,7 @@ import {
     Camera,
     ClipboardList
 } from 'lucide-react';
+import {useSelector} from 'react-redux';
 
 // --- Chart Components ---
 
@@ -120,23 +121,95 @@ const SimpleBarChart = ({ data, labels, color, maxValue }) => {
     );
 };
 
-// --- Mock Data ---
+const computeWeeklyMetrics = (weeklyStats) => {
+    let weeklyMetrics = {
+        0: {
+            day: 'Sun',
+            hasLoggedProgress: false,
+        },
+        1: {
+            day: 'Mon',
+            hasLoggedProgress: false
+        },
+        2: {
+            day: 'Tue',
+            hasLoggedProgress: false
+        },
+        3: {
+            day: 'Wed',
+            hasLoggedProgress: false
+        },
+        4: {
+            day: 'Thu',
+            hasLoggedProgress: false
+        },
+        5: {
+            day: 'Fri',
+            hasLoggedProgress: false
+        },
+        6: {
+            day: 'Sat',
+            hasLoggedProgress: false
+        },
+    }
 
-const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    weeklyStats.forEach((statObj) => {
+        weeklyMetrics[statObj.day].hasLoggedProgress = true;
+        weeklyMetrics[statObj.day].caloriesBurnt = statObj.caloriesBurnt;
+        weeklyMetrics[statObj.day].sleepDuration = statObj.sleepDuration;
+        weeklyMetrics[statObj.day].proteinConsumption = statObj.proteinConsumption;
+        weeklyMetrics[statObj.day].workoutMinutes = statObj.workoutMinutes;
+        weeklyMetrics[statObj.day].dailySteps = statObj.dailySteps;
+    });
+
+    let weeklyCaloriesBunt = []; 
+    let weeklySleepDuration = []; 
+    let weeklyProteinConsumption = []; 
+    let weeklyWorkoutMins = [];
+    let weeklyDailySteps = [];
+
+    Object.values(weeklyMetrics).forEach((valObj) => {
+        if(valObj.hasLoggedProgress){
+            weeklyCaloriesBunt.push(valObj.caloriesBurnt);
+            weeklySleepDuration.push(valObj.sleepDuration);
+            weeklyProteinConsumption.push(valObj.sleepDuration);
+            weeklyWorkoutMins.push(valObj.sleepDuration);
+            weeklyDailySteps.push(valObj.sleepDuration);
+        } else {
+            weeklyCaloriesBunt.push(0);
+            weeklySleepDuration.push(0);
+            weeklyProteinConsumption.push(0);
+            weeklyWorkoutMins.push(0);
+            weeklyDailySteps.push(0);
+        }
+    });
+
+    return {
+        weeklyMetrics,
+        weeklyCaloriesBunt,
+        weeklySleepDuration,
+        weeklyProteinConsumption,
+        weeklyWorkoutMins,
+        weeklyDailySteps
+    };
+}
+
+// --- Mock Images ---
 const INITIAL_IMAGES = [
     { id: 1, week: 'Week 1', date: 'Oct 1', url: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=400&fit=crop' },
     { id: 2, week: 'Week 4', date: 'Oct 28', url: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&h=400&fit=crop' },
     { id: 3, week: 'Week 8', date: 'Nov 25', url: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=400&fit=crop' },
 ];
 
-export const ProgressDashboard = ({ user }) => {
+export const ProgressDashboard = () => {
     // Use hasHistory to determine if we show mock data or empty data
-    const hasHistory = user?.hasHistory !== false; // Default true if undefined (for safety), but App.tsx ensures it's set
+    const hasHistory = user?.hasHistory !== false; // Default true if undefined (for safety), but App.jsx ensures it's set
 
     const navigate = useNavigate();
 
-    const [streakDays] = useState(hasHistory ? 12 : 0);
-    const [effectivenessScore] = useState(hasHistory ? 78 : 0); // 0-100
+    const { user } = useSelector((state) => state.user);
+    const { streakCount, effectivenessScore, weeklyStats } = useSelector((state) => state.progress);
+
     const [images, setImages] = useState(hasHistory ? INITIAL_IMAGES : []);
     const fileInputRef = useRef(null);
 
@@ -165,6 +238,18 @@ export const ProgressDashboard = ({ user }) => {
     const triggerUpload = () => {
         fileInputRef.current?.click();
     };
+
+    // Get week labels
+    const { 
+        weeklyMetrics,
+        weeklyCaloriesBunt,
+        weeklySleepDuration,
+        weeklyProteinConsumption,
+        weeklyWorkoutMins,
+        weeklyDailySteps
+    } = computeWeeklyMetrics(weeklyStats);
+
+    const weekLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
     // Zeroed out data for new users
     const emptyWeekData = [0, 0, 0, 0, 0, 0, 0];
@@ -290,21 +375,22 @@ export const ProgressDashboard = ({ user }) => {
 
                         <div className="flex items-center gap-4">
                             <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center border-2 border-orange-500/20 shadow-[0_0_30px_rgba(249,115,22,0.2)]">
-                                <Flame className={`w-10 h-10 text-orange-500 fill-orange-500 ${streakDays > 0 ? 'animate-pulse' : ''}`} />
+                                <Flame className={`w-10 h-10 text-orange-500 fill-orange-500 ${streakCount > 0 ? 'animate-pulse' : ''}`} />
                             </div>
                             <div>
-                                <h3 className="text-4xl font-bold text-white">{streakDays}</h3>
+                                <h3 className="text-4xl font-bold text-white">{streakCount}</h3>
                                 <p className="text-orange-400 font-medium uppercase tracking-wider text-sm">Day Streak</p>
                             </div>
                         </div>
 
                         {/* Weekly Heatmap */}
                         <div className="flex gap-3">
-                            {WEEK_LABELS.map((day, i) => {
+                            {Object.entries(weeklyMetrics).map(([key,valObj]) => {
                                 // Mock active days only if user has history
-                                const isActive = hasHistory && i < 5;
+                                const day = valObj.day;
+                                const isActive = hasHistory && valObj.hasLoggedProgress;
                                 return (
-                                    <div key={day} className="flex flex-col items-center gap-2">
+                                    <div key={key} className="flex flex-col items-center gap-2">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${isActive
                                             ? 'bg-orange-500 text-white border-orange-400 shadow-lg shadow-orange-500/20'
                                             : 'bg-slate-800 text-slate-600 border-slate-700'
@@ -320,25 +406,25 @@ export const ProgressDashboard = ({ user }) => {
 
                     {/* Badges */}
                     <div className="mt-8 pt-6 border-t border-slate-800/50 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border min-w-max transition-colors ${streakDays >= 15 ? 'bg-yellow-500/10 border-yellow-500/50' : 'bg-slate-800/50 border-slate-700/50'
+                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border min-w-max transition-colors ${streakCount >= 15 ? 'bg-yellow-500/10 border-yellow-500/50' : 'bg-slate-800/50 border-slate-700/50'
                             }`}>
-                            <Medal className={`w-5 h-5 ${streakDays >= 15 ? 'text-yellow-500' : 'text-slate-500'}`} />
-                            <span className={`text-sm font-bold ${streakDays >= 15 ? 'text-yellow-400' : 'text-slate-400'}`}>15 Day Badge</span>
-                            {streakDays < 15 && <Lock className="w-3 h-3 text-slate-600" />}
+                            <Medal className={`w-5 h-5 ${streakCount >= 15 ? 'text-yellow-500' : 'text-slate-500'}`} />
+                            <span className={`text-sm font-bold ${streakCount >= 15 ? 'text-yellow-400' : 'text-slate-400'}`}>15 Day Badge</span>
+                            {streakCount < 15 && <Lock className="w-3 h-3 text-slate-600" />}
                         </div>
 
-                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border min-w-max transition-colors ${streakDays >= 30 ? 'bg-indigo-500/10 border-indigo-500/50' : 'bg-slate-800/50 border-slate-700/50'
+                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border min-w-max transition-colors ${streakCount >= 30 ? 'bg-indigo-500/10 border-indigo-500/50' : 'bg-slate-800/50 border-slate-700/50'
                             }`}>
-                            <Trophy className={`w-5 h-5 ${streakDays >= 30 ? 'text-indigo-500' : 'text-slate-500'}`} />
-                            <span className={`text-sm font-bold ${streakDays >= 30 ? 'text-indigo-400' : 'text-slate-400'}`}>30 Day Titan</span>
-                            {streakDays < 30 && <Lock className="w-3 h-3 text-slate-600" />}
+                            <Trophy className={`w-5 h-5 ${streakCount >= 30 ? 'text-indigo-500' : 'text-slate-500'}`} />
+                            <span className={`text-sm font-bold ${streakCount >= 30 ? 'text-indigo-400' : 'text-slate-400'}`}>30 Day Titan</span>
+                            {streakCount < 30 && <Lock className="w-3 h-3 text-slate-600" />}
                         </div>
 
-                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border min-w-max transition-colors ${streakDays >= 60 ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-slate-800/50 border-slate-700/50'
+                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border min-w-max transition-colors ${streakCount >= 60 ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-slate-800/50 border-slate-700/50'
                             }`}>
-                            <Medal className={`w-5 h-5 ${streakDays >= 60 ? 'text-emerald-500' : 'text-slate-500'}`} />
-                            <span className={`text-sm font-bold ${streakDays >= 60 ? 'text-emerald-400' : 'text-slate-400'}`}>60 Day Master</span>
-                            {streakDays < 60 && <Lock className="w-3 h-3 text-slate-600" />}
+                            <Medal className={`w-5 h-5 ${streakCount >= 60 ? 'text-emerald-500' : 'text-slate-500'}`} />
+                            <span className={`text-sm font-bold ${streakCount >= 60 ? 'text-emerald-400' : 'text-slate-400'}`}>60 Day Master</span>
+                            {streakCount < 60 && <Lock className="w-3 h-3 text-slate-600" />}
                         </div>
                     </div>
                 </div>
@@ -357,8 +443,8 @@ export const ProgressDashboard = ({ user }) => {
                     </div>
                     <div className="h-40">
                         <SimpleBarChart
-                            labels={WEEK_LABELS}
-                            data={hasHistory ? [1800, 2150, 1900, 2400, 2200, 1600, 2100] : emptyWeekData}
+                            labels={weekLabels}
+                            data={hasHistory ? weeklyCaloriesBunt : emptyWeekData}
                             color="#f97316"
                         />
                     </div>
@@ -374,8 +460,8 @@ export const ProgressDashboard = ({ user }) => {
                     </div>
                     <div className="h-40">
                         <SimpleLineChart
-                            labels={WEEK_LABELS}
-                            data={hasHistory ? [6.5, 7.2, 8.0, 7.5, 6.0, 8.5, 7.8] : emptyWeekData}
+                            labels={weekLabels}
+                            data={hasHistory ? weeklySleepDuration : emptyWeekData}
                             color="#6366f1"
                             maxValue={10}
                         />
@@ -392,8 +478,8 @@ export const ProgressDashboard = ({ user }) => {
                     </div>
                     <div className="h-40">
                         <SimpleBarChart
-                            labels={WEEK_LABELS}
-                            data={hasHistory ? [140, 160, 135, 180, 150, 130, 155] : emptyWeekData}
+                            labels={weekLabels}
+                            data={hasHistory ? weeklyProteinConsumption : emptyWeekData}
                             color="#10b981"
                         />
                     </div>
@@ -409,8 +495,8 @@ export const ProgressDashboard = ({ user }) => {
                     </div>
                     <div className="h-40">
                         <SimpleLineChart
-                            labels={WEEK_LABELS}
-                            data={hasHistory ? [45, 60, 45, 0, 75, 90, 30] : emptyWeekData}
+                            labels={weekLabels}
+                            data={hasHistory ? weeklyWorkoutMins : emptyWeekData}
                             color="#3b82f6"
                         />
                     </div>
@@ -426,8 +512,8 @@ export const ProgressDashboard = ({ user }) => {
                     </div>
                     <div className="h-40 w-full">
                         <SimpleLineChart
-                            labels={WEEK_LABELS}
-                            data={hasHistory ? [8500, 11200, 9800, 4500, 12500, 9000, 11500] : emptyWeekData}
+                            labels={weekLabels}
+                            data={hasHistory ? weeklyDailySteps : emptyWeekData}
                             color="#06b6d4"
                         />
                     </div>
@@ -488,4 +574,3 @@ export const ProgressDashboard = ({ user }) => {
         </div>
     );
 };
-

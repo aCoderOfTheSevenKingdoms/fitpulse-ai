@@ -1,10 +1,15 @@
 // Models
-const ProgressLog = require('../models/progressLog.model');
 const DailyProgress = require('../models/dailyProgress.model');
 const Goal = require('../models/goals.model');
 
 // Services
-const { generatePrompt, computeMetrics, evaluateProgress } = require('../services/progress.service');
+const { 
+    generatePrompt, 
+    computeMetrics, 
+    evaluateProgress,
+    calculateEffectiveness,
+    fetchProgressStats
+} = require('../services/progress.service');
 
 const progressLog = async (req,res) => {
 
@@ -18,28 +23,11 @@ const progressLog = async (req,res) => {
         workoutDuration
     } = req.body;
 
-    // Get date
-    const date = new Date();
+    // Get date & userId
+    const logDate = req.logDate;
+    const userId = req.userId;
 
     try{
-
-        // Save progress log
-        await ProgressLog.create({
-            userId: req.userId,
-            goalId,
-            date: date.toISOString().split('T')[0],
-            progressInput: {
-                rawData: { // This raw data is to be given to AI
-                    mealDescription,
-                    workoutDescription
-                },
-                inputMetrics: {
-                    sleepHours,
-                    stepCount,
-                    workoutDuration
-                }
-            }
-        });
 
         // Generate prompt to compute some metrics
         const prompt = generatePrompt(mealDescription, workoutDescription);
@@ -68,7 +56,7 @@ const progressLog = async (req,res) => {
             // Fetch the goal user want to update 
         const currentGoal = await Goal.findOne({
             _id: goalId,
-            userId: req.userId
+            userId
         });
         
         if (!currentGoal) {
@@ -83,46 +71,74 @@ const progressLog = async (req,res) => {
 
         // Update goal status to completed
         if(isGoalCompleted){
-            currentGoal.completedAt = date;
+            currentGoal.completedAt = new Date(logDate);
         }
         await currentGoal.save();
 
-        // Update Daily progress
-        const existing = await DailyProgress.findOne({ userId: req.userId, date: date.toISOString().split('T')[0] });
+        // Update Daily progress model
+        const yesterdayLogDate = new Date();
+        yesterdayLogDate.setDate(new Date(logDate).getDate() - 1);
+
+        const yesterdayProgress = await DailyProgress.findOne({ userId, date: yesterdayLogDate.toISOString().split('T')[0] });
 
         let streakCount = 0;
 
-        if (isGoalCompleted) {
-           streakCount = existing ? existing.streakCount + 1 : 1;
-        } else {
-           streakCount = 0;
+        if(yesterdayProgress && yesterdayProgress.isGoalCompleted){
+            streakCount += yesterdayProgress.streakCount;
+
+            if(isGoalCompleted){
+                streakCount++;
+            } else {
+                streakCount = 0;
+            }
         }
 
-        const dailyProgress = await DailyProgress.findOneAndUpdate(
-            { userId: req.userId, date: date.toISOString().split('T')[0] },
-            {
-                $inc: {
-                    "totals.caloriesConsumed": response.caloriesConsumed,
-                    "totals.caloriesBurnt": response.caloriesBurnt,
-                    "totals.proteinGrams": response.proteinGrams,
-                    "totals.stepCount": stepCount,
-                    "totals.sleepHours": sleepHours,
-                    "totals.workoutDuration": workoutDuration
+        // Effectiveness re-calculation
+        const effectiveness = await calculateEffectiveness(userId, streakCount);
+
+        await DailyProgress.create({
+            userId,
+            goalId,
+            date: logDate,
+            streakCount,
+            effectivenessScore: effectiveness,
+            progressInput: {
+                rawData: { // This raw data is to be given to AI
+                    mealDescription,
+                    workoutDescription
                 },
-                $set: {
-                    streakCount,
-                    goalStatus,
-                    isGoalCompleted
+                inputMetrics: {
+                    sleepHours,
+                    stepCount,
+                    workoutDuration
                 }
             },
-            { new: true, upsert: true }
-        );
+            totals: {
+                caloriesConsumed: response.caloriesConsumed,
+                caloriesBurnt: response.caloriesBurnt,
+                proteinGrams: response.proteinGrams,
+                stepCount,
+                sleepHours,
+                workoutDuration
+            },
+            goalStatus,
+            isGoalCompleted
+        })
+
+        // Fetch Weekly Progress Stats
+        const stats = await fetchProgressStats(userId, logDate);
+        if(!stats){
+           return res.json({
+            message: "Some error occured while fetching weekly progress stats"
+           })
+        }
 
         return res.status(200).json({
             message: "Progress logged successfully✅",
             completedAt: currentGoal.completedAt,
-            streakCount: dailyProgress.streakCount,
-            totalCaloriesBurnt: dailyProgress.totals.caloriesBurnt
+            streakCount,
+            effectivenessScore: effectiveness,
+            weeklyStats: stats
         })
 
     } catch (error) {

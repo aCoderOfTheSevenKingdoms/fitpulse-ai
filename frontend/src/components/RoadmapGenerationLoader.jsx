@@ -1,7 +1,7 @@
 import { Activity, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const RoadmapGenerationLoader = ({ isOpen, isError, onRetry }) => {
+const RoadmapGenerationLoader = ({ isOpen, isError }) => {
   const [dots, setDots] = useState("");
 
   // Animated dots loader
@@ -58,15 +58,8 @@ const RoadmapGenerationLoader = ({ isOpen, isError, onRetry }) => {
 
               <p className="text-slate-400 text-sm mt-2 max-w-xs">
                 Something went wrong while generating your AI roadmap.
-                Please try again.
+                Please try again later.
               </p>
-
-              <button
-                onClick={onRetry}
-                className="px-6 py-3 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold mt-4 transition"
-              >
-                Retry
-              </button>
             </>
           ) : (
             <>

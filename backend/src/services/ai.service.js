@@ -8,6 +8,8 @@ const llmAPIcall = async (prompt, temp, maxTokens) => {
 
     try{
 
+        console.log("Sending request to OpenRouter");
+
         const completion = await openRouter.chat.send({
             chatGenerationParams: {
                 model: "openai/gpt-4o-mini",
@@ -26,6 +28,8 @@ const llmAPIcall = async (prompt, temp, maxTokens) => {
                 stream: false,
             }
         });
+
+        console.log("LLM responded");
 
         if (!completion?.choices?.[0]?.message?.content) {
             throw new Error("Empty response from LLM");
