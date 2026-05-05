@@ -14,6 +14,7 @@
     "@openrouter/sdk": "^0.9.11",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.73.3",
+    "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
@@ -23,7 +24,11 @@
     "ioredis": "^5.9.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
+    "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
     "nodemailer": "^8.0.1",
+    "streamifier": "^0.1.1",
+    "winston": "^3.19.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

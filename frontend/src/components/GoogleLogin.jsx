@@ -3,6 +3,8 @@ import axios from "axios";
 import { useDispatch } from "react-redux";
 import { setUser } from "../redux/features/userSlice"
 import { useNavigate } from "react-router-dom";
+import {showInfo, showSuccess, showError} from '../utils/toast';
+import logger from '../utils/logger';
 
 const GoogleLogin = () => {
     const googleButton = useRef(null);
@@ -62,14 +64,16 @@ const GoogleLogin = () => {
                 // console.log(response.data);
                 dispatch(setUser(response.data.user));
                 if (response.data.isPasswordSet) {
+                    showSuccess(response.data.message || "Logged in successfully");
                     navigate("/");
                 } else {
+                    showInfo("Please set your password");
                     navigate("/set-password");
                 }
             })
             .catch(error => {
-                console.error(error);
-                alert("Failed to login with Google");
+                logger.error(`[GOOGLE OAUTH ERROR] ${error.response?.data?.message}`);
+                showError(error.response?.data?.message || "Failed to login with Google");
             });
     }
 

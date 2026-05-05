@@ -12,10 +12,20 @@ import {
 import { EmptyGoalsState } from '../components/EmptyGoalsState';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
-import {setGoals, updateGoalProgress} from '../redux/features/planSlice';
+import {
+  setGoalsForTab,
+  resetPlanState, 
+  setPlanId, 
+  setActiveTab, 
+  updateGoalProgress
+} from '../redux/features/planSlice';
 import { setProgressStats } from '../redux/features/progressSlice';
 import RoadmapGenerationLoader from '../components/RoadmapGenerationLoader';
 import { useLocation } from 'react-router-dom';
+import { showSuccess, showError } from '../utils/toast';
+import { GoalsList } from '../components/GoalsList';
+import GoalFilterTabs from '../components/GoalFilterTabs';
+import logger from '../utils/logger';
 
 // Mock Data for "History" (Pre-filled for existing users)
 const HISTORY_GOALS = [
@@ -79,7 +89,16 @@ export const DailyGoals = () => {
 
     // From redux slices
     const { user } = useSelector((state) => state.user);
-    const { goals: planGoals, planId } = useSelector((state) => state.plan);
+    const planState = useSelector((state) => state.plan);
+
+    const planId = planState?.planId;
+    const goalsById = planState?.goalsById || {};
+    const tabs = planState?.tabs || {
+      beginner: [],
+      intermediate: [],
+      advanced: []
+    };
+    const activeTab = planState?.activeTab || "beginner";
     const { streakCount, weeklyStats } = useSelector((state) => state.progress);
 
     // States
@@ -88,6 +107,7 @@ export const DailyGoals = () => {
     const [error,setError] = useState(false);
     const [selectedGoal, setSelectedGoal] = useState(null);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+    const [isTabSwitching, setIsTabSwitching] = useState(false);
     const [progressInput, setProgressInput] = useState({ 
       mealDescription: "",
       workoutDescription: "",
@@ -96,51 +116,105 @@ export const DailyGoals = () => {
       workoutDuration: 0
     });
 
+    const tabRanges = {
+      beginner: { start: 0, limit: 30 },
+      intermediate: { start: 30, limit: 30 },
+      advanced: { start: 60, limit: 30 }
+    };
+
+    const fetchGoalsByTab = async (tab) => {
+      try{
+
+        if(tabs[tab]?.length > 0) return;
+        
+        setIsTabSwitching(true);
+
+        const {start, limit} = tabRanges[tab];
+
+        const res = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/plan/get-plan/${planId}?start=${start}&limit=${limit}`,
+          {withCredentials: true}
+        );
+
+        logger.log("TAB: ", tab);
+        logger.log("API response: ", res.data.goals);
+
+        dispatch(setGoalsForTab({
+          tab,
+          goals: res.data.goals
+        }));
+
+      } catch (error) {
+        logger.error(error.message);
+        showError("Some errr occured while fetching goals");
+      } finally {
+        setIsTabSwitching(false);
+      }
+    }
+
+    const handleTabChange = (tab) => {
+      dispatch(setActiveTab(tab));
+      fetchGoalsByTab(tab);
+    }
+
     // Poll every 2 seconds to getPlan api to get goals
     useEffect(() => {
-      let isMounted = true;
-      if(location.state?.isNewPlan){
-        setIsPlanGenerationPending(true);
-      }
 
-      const interval = setInterval(async () => {
-        try {
-          const res = await axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/api/plan/get-plan/${planId}`,
-            { withCredentials: true }
-          );
+    if(!location.state?.isNewPlan) return;
 
-          if (!isMounted) return;
+    let isMounted = true;
+    setIsPlanGenerationPending(true);
+    let delay = 2000;
 
-          if (res.data.status === "completed") {
-            dispatch(setGoals(res.data.goals));
-            setIsPlanGenerationPending(false);
-            clearInterval(interval);
-          } 
-          else if (res.data.status === "failed") {
-            setError(true);
-            clearInterval(interval);
-          } 
+    const poll = async () => {
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/plan/get-plan/${planId}`,
+          { withCredentials: true }
+        );
 
-        } catch (err) {
-          console.error("Polling error:", err);
+        if (!isMounted) return;
+
+        if (res.data.status === "completed") {
+          setIsPlanGenerationPending(false);
+
+          dispatch(resetPlanState());
+          // 👇 Fetch first tab data after completion
+          fetchGoalsByTab("beginner");
+
+          showSuccess("Plan Generated Successfully");
+          return;
         }
-      }, 2000);
 
-      return () => {
-        isMounted = false;
-        clearInterval(interval);
-      };
-    }, [planId]);
+        if (res.data.status === "failed") {
+          setError(true);
+          return;
+        }
+
+        delay = Math.min(delay * 1.5, 10000);
+        setTimeout(poll, delay);
+
+      } catch (err) {
+        logger.error(`[POLLING ERROR] ${err.message}`);
+      }
+    };
+
+    poll();
+
+    return () => {
+      isMounted = false;
+    };
+
+  }, [planId]);
 
     // ----------------------
     // Goals Source (AI or fallback)
     // ----------------------
 
     const rawGoals = useMemo(() => {
-        if (planGoals?.length) return planGoals;
-        return [];
-    }, [planGoals]);
+      const ids = tabs?.[activeTab] || [];
+      return ids.map(id => goalsById[id]).filter(Boolean);
+    }, [tabs, goalsById, activeTab]);
 
     // ----------------------
     // Normalized Goals
@@ -184,7 +258,7 @@ export const DailyGoals = () => {
 
       avg = total/7;
  
-      return avg;
+      return Math.round(avg);
     }, [weeklyStats]);
 
     const streak = useMemo(() => {
@@ -237,8 +311,6 @@ export const DailyGoals = () => {
                 }, 
                 { withCredentials: true }
             )     
- 
-            console.log("API response: ", response.data);
 
             // ----------------------
             // 🔁 REDUX UPDATE PLACEHOLDER
@@ -254,9 +326,12 @@ export const DailyGoals = () => {
               weeklyStats: response.data.weeklyStats || []
             }))
 
+            showSuccess("Progress logged successfully");
+
         } catch (err) {
             setIsLoading(false);
-            console.error('Failed to update progress', err);
+            logger.error(`[PROGRESS UPDATE ERROR] ${err.message}`);
+            showError(err.message || "Failed to log progress");
         } finally {
             setIsLoading(false);
             handleCloseModal();
@@ -277,7 +352,7 @@ export const DailyGoals = () => {
     // ----------------------
 
     return (
-        <div className="w-full max-w-4xl mx-auto animate-in fade-in duration-500">
+        <div className="relative w-full max-w-4xl mx-auto animate-in fade-in duration-500">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
@@ -293,8 +368,8 @@ export const DailyGoals = () => {
             </div>
       
             {/* Progress Summary */}
-            <div className="flex items-center gap-4 bg-slate-900 p-3 rounded-xl border border-slate-800">
-              <div className="text-right">
+            <div className="min-w-fit flex justify-center items-center gap-4 bg-slate-900 p-3 rounded-xl border border-slate-800">
+              <div className="text-center">
                 <p className="text-xs text-slate-500 uppercase font-bold">
                   Avg Calories Burnt
                 </p>
@@ -303,7 +378,7 @@ export const DailyGoals = () => {
                 </p>
               </div>
               <div className="h-8 w-px bg-slate-800"></div>
-              <div className="text-right">
+              <div className="text-center">
                 <p className="text-xs text-slate-500 uppercase font-bold">
                   Completed
                 </p>
@@ -315,117 +390,24 @@ export const DailyGoals = () => {
           </div>
       
           {/* Goals List */}
-          <div className="space-y-4">
-            {goals.map((goal) => (
-              <div
-                key={goal.day}
-                className={`relative group flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${
-                  goal.status === "active"
-                    ? "bg-slate-800/80 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.1)]"
-                    : "bg-slate-900 border-slate-800"
-                }`}
-              >
-                {/* Fire Icon / Status Indicator */}
-                <div
-                  className={`relative w-16 h-16 shrink-0 flex items-center justify-center rounded-2xl transition-all duration-500 ${
-                    goal.status === "completed"
-                      ? "bg-gradient-to-br from-orange-500 to-red-600 shadow-lg shadow-orange-500/20"
-                      : goal.status === "active"
-                      ? "bg-slate-700"
-                      : "bg-slate-800"
-                  }`}
-                >
-                  <Flame
-                    className={`w-8 h-8 ${
-                      goal.status === "completed"
-                        ? "text-white fill-white"
-                        : "text-slate-500"
-                    }`}
-                  />
-                  <span
-                    className={`absolute -bottom-2 -right-2 w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold border-4 border-slate-950 ${
-                      goal.status === "completed"
-                        ? "bg-green-500 text-white"
-                        : "bg-slate-700 text-slate-400"
-                    }`}
-                  >
-                    {goal.status === "completed" ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      goal.day
-                    )}
-                  </span>
-                </div>
-      
-                {/* Content */}
-                <div className="flex-1 text-center sm:text-left">
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-                    <h3
-                      className={`font-bold text-lg ${
-                        goal.status === "locked" ? "text-slate-500" : "text-white"
-                      }`}
-                    >
-                      {goal.description}
-                    </h3>
-      
-                    {goal.status === "active" && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-400 uppercase tracking-wide border border-cyan-500/20">
-                        Current
-                      </span>
-                    )}
-                  </div>
-      
-                  <div className="flex items-center justify-center sm:justify-start gap-3 mt-2 text-xs font-medium text-slate-500">
-                    <span
-                      className={`px-2 py-1 rounded bg-slate-950 border border-slate-800 ${
-                        goal.difficulty === "Advanced"
-                          ? "text-red-400"
-                          : goal.difficulty === "Intermediate"
-                          ? "text-yellow-400"
-                          : "text-emerald-400"
-                      }`}
-                    >
-                      {goal.difficulty}
-                    </span>
-                  </div>
-                </div>
-      
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                  {goal.status === "locked" ? (
-                    <div className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-600 cursor-not-allowed">
-                      <Lock className="w-4 h-4" />
-                      <span className="text-sm font-medium">Locked</span>
-                    </div>
-                  ) : goal.status === "completed" ? (
-                    <button
-                      onClick={() => handleAction(goal, "view")}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 text-slate-300 transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span className="text-sm font-medium">Details</span>
-                    </button>
-                  ) : (
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <button
-                        onClick={() => handleAction(goal, "view")}
-                        className="flex-1 sm:flex-none flex items-center justify-center p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleAction(goal, "update")}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-lg shadow-cyan-500/20 transition-all"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                        <span>Update</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div
+            className='sticky top-20 z-10 mb-8 flex justify-center'
+          >
+            <GoalFilterTabs activeTab={activeTab} onTabChange={handleTabChange} />
           </div>
+          
+          {isTabSwitching ? (
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-24 rounded-2xl bg-slate-800 border border-slate-700 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : (
+            <GoalsList goals={goals} handleAction={handleAction} />
+          )}
       
           {/* Detail / Update Modal */}
           {selectedGoal && (
@@ -540,7 +522,7 @@ export const DailyGoals = () => {
                     <button
                       onClick={handleSubmitProgress}
                       disabled={!progressInput.mealDescription.trim() || !progressInput.workoutDescription.trim() || isLoading}
-                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="w-full py-3.5 flex justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       {
                         isLoading ? (

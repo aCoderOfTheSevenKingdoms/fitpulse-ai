@@ -1,8 +1,13 @@
 import React from 'react';
 import { Search, Bell, Bookmark, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { DefaultAvatar } from './DefaultAvatar';
 
 export const Topbar = ({ onMenuClick, user }) => {
+
+    const {avatarUrl} = useSelector((state) => state.user);
+
     return (
         <header className="sticky top-0 z-30 flex items-center h-16 px-4 lg:px-8 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
             <button
@@ -40,15 +45,18 @@ export const Topbar = ({ onMenuClick, user }) => {
 
                 <Link
                     to="/profile"
-                    className="flex items-center gap-3 pl-2 rounded-full hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-3 pl-4 rounded-full hover:bg-slate-800 transition-colors"
                 >
                     <div className="flex flex-col text-right hidden md:block">
                         <span className="text-sm font-medium text-white">{user?.name}</span>
-                        <span className="text-xs text-slate-400">{user?.isPro ? 'Pro Member' : 'Member'}</span>
+                        {/* <span className="text-xs text-slate-400">{user?.isPro ? 'Pro Member' : 'Member'}</span> */}
                     </div>
-                    <div className="relative w-9 h-9 overflow-hidden rounded-full bg-slate-700 ring-2 ring-slate-800">
+                    {avatarUrl
+                      ? <div className="relative w-9 h-9 overflow-hidden rounded-full bg-slate-700 ring-2 ring-slate-800">
                         <img src={user?.avatar} alt="Avatar" className="object-cover w-full h-full" />
-                    </div>
+                      </div>
+                     : <DefaultAvatar size={40} />
+                    }
                 </Link>
             </div>
         </header>

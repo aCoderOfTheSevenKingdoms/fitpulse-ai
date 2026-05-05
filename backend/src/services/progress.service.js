@@ -3,6 +3,7 @@ const { sanitizeLLMoutput } = require('../utils/progress.utilities');
 const User = require('../models/user.model');
 const DailyProgress = require('../models/dailyProgress.model');
 const mongoose = require("mongoose");
+const logger = require('../utils/logger');
 
 /**
  * This service checks if goals are met or not.
@@ -73,7 +74,7 @@ const computeMetrics = async (prompt) => {
         return parsed;
 
     } catch (error) {
-        console.error("LLM API FAILURE:", error.message);
+        logger.error("LLM API FAILURE:", error.message);
         return null;
     }
 }
@@ -149,11 +150,11 @@ const calculateEffectiveness = async (userId, streakCount) => {
          * The number of logs will be the base score
         */
 
-        console.log("userId:", userId);
-        console.log("typeof userId:", typeof userId);
+        logger.info("userId:", userId);
+        logger.info("typeof userId:", typeof userId);
 
         const user = await User.findById(userId);
-        console.log("user:", user);
+        logger.info("user:", user);
 
         const logs = await DailyProgress.aggregate([
             // 1. Match logs for user in last 7 days
@@ -187,7 +188,7 @@ const calculateEffectiveness = async (userId, streakCount) => {
             }
         ]);
 
-        console.log("Progress logs: ", logs);
+        logger.info("Progress logs: ", logs);
 
         const baseScore = logs.length;
         
@@ -197,23 +198,23 @@ const calculateEffectiveness = async (userId, streakCount) => {
         */
 
         const userCreatedDate = new Date(user.createdAt);
-        console.log("User created at: ", userCreatedDate);
+        logger.info("User created at: ", userCreatedDate);
 
 
         // difference in milliseconds
         const diffInMs = Date.now() - userCreatedDate;
-        console.log("Diff in ms: ", diffInMs);
+        logger.info("Diff in ms: ", diffInMs);
 
         // in days
         const daysSinceJoined = Math.max(1, Math.floor(diffInMs / (1000 * 60 * 60 * 24)));
 
-        const difficulty = 1 + (daysSinceJoined/30);
+        const difficulty = 1 + Math.round(daysSinceJoined/30);
 
         // Compute the final effectiveness score
-        let effectiveness = (baseScore/difficulty)*10; // scale to 0-70
+        let effectiveness = Math.round(baseScore/difficulty)*10; // scale to 0-70
         if(isNaN(effectiveness)) effectiveness = 0;
-        console.log("Effectivenss score: ", effectiveness);
-        console.log("Streak count: ", streakCount);
+        logger.info("Effectivenss score: ", effectiveness);
+        logger.info("Streak count: ", streakCount);
 
         // Add a cap to 100 with extra bonuses
         let streakBonus = 0;
@@ -224,14 +225,14 @@ const calculateEffectiveness = async (userId, streakCount) => {
         } else if (streakCount >= 5) {
             streakBonus += 5;
         }
-        console.log("Streak Bonus: ", streakBonus);
+        logger.info("Streak Bonus: ", streakBonus);
         effectiveness = Math.min(100, effectiveness + streakBonus);
-        console.log("Final Effectiveness score: ", effectiveness);
+        logger.info("Final Effectiveness score: ", effectiveness);
 
         return effectiveness;
 
     } catch (error) {
-        console.error("Error while calculating effectiveness score: ", error);
+        logger.error("Error while calculating effectiveness score: ", error);
         throw error;
     }
 }
@@ -272,9 +273,38 @@ const fetchProgressStats = async (userId, logDate) => {
         return stats;
 
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         throw new Error("Some error occured while fetching weekly progress stats");
     }
+}
+
+/**
+ * This service resets the broken streaks of all the users with an active streak 
+*/
+const resetBrokenStreaks = async () => {
+
+   // Get Yesterday's date string
+   const yesterday = new Date();
+   yesterday.setDate(yesterday.getDate() - 1);
+   const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+   // Find all the users who had an active streak (streakCount > 0)
+   // but did not logged progress yesterday
+   const usersWithStreak = User.find({streakCount : {$gt: 0}});
+
+   for(const user of usersWithStreak){
+    const yesterdayLog = await DailyProgress.findOne({
+        userId: user._id,
+        date: yesterdayStr,
+        isGoalCompleted: true
+    });
+
+    if(!yesterdayLog){
+        // No completed log yesterday -> streak breaks
+        await User.findByIdAndUpdate(user._id, {streakCount: 0});
+        logger.info(`[Streak] Reset streak for user ${user._id}`);
+    }
+   }
 }
 
 module.exports = {
@@ -282,5 +312,6 @@ module.exports = {
     generatePrompt,
     evaluateProgress,
     calculateEffectiveness,
-    fetchProgressStats
+    fetchProgressStats,
+    resetBrokenStreaks
 }

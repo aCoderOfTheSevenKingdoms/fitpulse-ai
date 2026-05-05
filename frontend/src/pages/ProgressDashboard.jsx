@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Flame,
@@ -13,9 +13,15 @@ import {
     Medal,
     Lock,
     Camera,
-    ClipboardList
+    ClipboardList,
+    Loader2,
+    Loader
 } from 'lucide-react';
-import {useSelector} from 'react-redux';
+import {useSelector, useDispatch} from 'react-redux';
+import { setProgressPics, deletePic } from '../redux/features/progressSlice';
+import axios from "axios";
+import {showError, showPromise, showSuccess} from '../utils/toast';
+import logger from '../utils/logger';
 
 // --- Chart Components ---
 
@@ -172,9 +178,9 @@ const computeWeeklyMetrics = (weeklyStats) => {
         if(valObj.hasLoggedProgress){
             weeklyCaloriesBunt.push(valObj.caloriesBurnt);
             weeklySleepDuration.push(valObj.sleepDuration);
-            weeklyProteinConsumption.push(valObj.sleepDuration);
-            weeklyWorkoutMins.push(valObj.sleepDuration);
-            weeklyDailySteps.push(valObj.sleepDuration);
+            weeklyProteinConsumption.push(valObj.proteinConsumption);
+            weeklyWorkoutMins.push(valObj.workoutMinutes);
+            weeklyDailySteps.push(valObj.dailySteps);
         } else {
             weeklyCaloriesBunt.push(0);
             weeklySleepDuration.push(0);
@@ -202,38 +208,111 @@ const INITIAL_IMAGES = [
 ];
 
 export const ProgressDashboard = () => {
+
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+
+    const { user } = useSelector((state) => state.user);
+    const { streakCount, effectivenessScore, weeklyStats, progressPics } = useSelector((state) => state.progress);
+    logger.log(`EFFECTIVENESS SCORE: ${effectivenessScore}`);
+    logger.log(`USER'S STREAK: ${streakCount}`);
+    logger.log(`WEEKLY STATS: ${weeklyStats}`);
+    logger.log(`PROGRESS PICS: ${progressPics}`);
+
     // Use hasHistory to determine if we show mock data or empty data
     const hasHistory = user?.hasHistory !== false; // Default true if undefined (for safety), but App.jsx ensures it's set
 
-    const navigate = useNavigate();
-
-    const { user } = useSelector((state) => state.user);
-    const { streakCount, effectivenessScore, weeklyStats } = useSelector((state) => state.progress);
-
-    const [images, setImages] = useState(hasHistory ? INITIAL_IMAGES : []);
     const fileInputRef = useRef(null);
+
+    const [uploading, setUploading] = useState(false);
+    const [removingPic, setRemovingPic] = useState(null);
+
+    // Get all the user's progress pics
+    const userProgressPics = useMemo(() => {
+        if(!progressPics) return [];
+        return progressPics;
+    }, [progressPics]);
 
     // Calculations for circular progress
     const radius = 56;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (effectivenessScore / 100) * circumference;
 
-    const handleFileChange = (event) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const newImage = {
-                id: Date.now(),
-                week: `Week ${images.length + 1}`, // Auto-increment week logic
-                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                url: URL.createObjectURL(file),
-            };
-            // Add new image to the beginning of the list
-            setImages([newImage, ...images]);
+    const handleFileUpload = async (event) => {
+        try {  
+
+          const file = event.target.files?.[0];  
+          if(!file){
+            showError("Invalid file");
+            return;
+          }  
+
+           setUploading(true);
+           showPromise(
+            "File Upload", 
+            {
+                loading: "Uploading File",
+                success: "File uploaded successfully",
+                error: "Failed uploading file"
+            }
+           );
+           
+
+           // Upload pic to backend
+           const formData = new FormData();
+           formData.append("image", file);
+
+           const uploadPromise = axios.post(
+            `${import.meta.env.VITE_BACKEND_URL}/api/progress/upload-pic`,
+            formData,
+            { withCredentials: true }
+           );
+
+           showPromise(uploadPromise, {
+            loading: "Uploading File",
+            success: "File uploded successfully",
+            error: "Failed uploading file"
+           })
+
+            const response = await uploadPromise;
+
+            if(response.status === 200 && response.data.photos){
+                const pics = response.data.photos?.map((pic) => {
+                    return {
+                        id: pic._id,
+                        date: pic.uploadedAt,
+                        url: pic.url
+                    }
+                });
+                dispatch(setProgressPics(pics));
+            }
 
             // Reset input value so same file can be selected again if needed
             event.target.value = '';
+
+            setUploading(false);
+        } catch (error) {
+            setUploading(false);
+            logger.error(`[FILE UPLOAD ERROR] ${error.message}`);
         }
     };
+
+    const handlePicRemoval = async (imgId) => {
+       try{
+        setRemovingPic(imgId);
+        await axios.delete(
+            `${import.meta.env.VITE_BACKEND_URL}/api/progress/delete-pic/${imgId}`,
+            { withCredentials: true }
+        );
+        dispatch(deletePic(imgId));
+        setRemovingPic(null);
+        showSuccess("Pic deleted successfully"); 
+       } catch (error) {
+        setRemovingPic(false);
+        logger.error(`[FILE DELETE ERROR] ${error.message}`);
+        showError("Some error occured while deleting pic");
+       }
+    }
 
     const triggerUpload = () => {
         fileInputRef.current?.click();
@@ -292,7 +371,7 @@ export const ProgressDashboard = () => {
                 ref={fileInputRef}
                 className="hidden"
                 accept="image/*"
-                onChange={handleFileChange}
+                onChange={handleFileUpload}
             />
 
             <div className="flex items-center justify-between">
@@ -388,7 +467,7 @@ export const ProgressDashboard = () => {
                             {Object.entries(weeklyMetrics).map(([key,valObj]) => {
                                 // Mock active days only if user has history
                                 const day = valObj.day;
-                                const isActive = hasHistory && valObj.hasLoggedProgress;
+                                const isActive = valObj.hasLoggedProgress;
                                 return (
                                     <div key={key} className="flex flex-col items-center gap-2">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${isActive
@@ -444,7 +523,7 @@ export const ProgressDashboard = () => {
                     <div className="h-40">
                         <SimpleBarChart
                             labels={weekLabels}
-                            data={hasHistory ? weeklyCaloriesBunt : emptyWeekData}
+                            data={weeklyCaloriesBunt}
                             color="#f97316"
                         />
                     </div>
@@ -461,7 +540,7 @@ export const ProgressDashboard = () => {
                     <div className="h-40">
                         <SimpleLineChart
                             labels={weekLabels}
-                            data={hasHistory ? weeklySleepDuration : emptyWeekData}
+                            data={weeklySleepDuration}
                             color="#6366f1"
                             maxValue={10}
                         />
@@ -479,7 +558,7 @@ export const ProgressDashboard = () => {
                     <div className="h-40">
                         <SimpleBarChart
                             labels={weekLabels}
-                            data={hasHistory ? weeklyProteinConsumption : emptyWeekData}
+                            data={weeklyProteinConsumption}
                             color="#10b981"
                         />
                     </div>
@@ -496,7 +575,7 @@ export const ProgressDashboard = () => {
                     <div className="h-40">
                         <SimpleLineChart
                             labels={weekLabels}
-                            data={hasHistory ? weeklyWorkoutMins : emptyWeekData}
+                            data={weeklyWorkoutMins}
                             color="#3b82f6"
                         />
                     </div>
@@ -513,7 +592,7 @@ export const ProgressDashboard = () => {
                     <div className="h-40 w-full">
                         <SimpleLineChart
                             labels={weekLabels}
-                            data={hasHistory ? weeklyDailySteps : emptyWeekData}
+                            data={weeklyDailySteps}
                             color="#06b6d4"
                         />
                     </div>
@@ -533,34 +612,32 @@ export const ProgressDashboard = () => {
                     </div>
                     <button
                         onClick={triggerUpload}
-                        className="flex items-center gap-2 px-5 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-xl font-bold shadow-lg shadow-pink-600/20 transition-all"
+                        disabled={uploading}
+                        className="flex items-center justify-center gap-2 text-sm w-[10rem] px-5 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-xl font-bold shadow-lg shadow-pink-600/20 transition-all"
                     >
-                        <Upload className="w-4 h-4" />
-                        Upload Photo
+                        {uploading 
+                        ? (<Loader2 className='animate-spin w-4 h-4' />)
+                        : (<><Upload className="w-4 h-4" />
+                        Upload Photo</>)
+                        }
                     </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {/* Upload Placeholder */}
-                    <button
-                        onClick={triggerUpload}
-                        className="aspect-[4/5] bg-slate-950 border-2 border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-500 hover:text-white hover:border-slate-500 transition-all group"
-                    >
-                        <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Upload className="w-6 h-6" />
-                        </div>
-                        <span className="font-medium">Add This Week</span>
-                    </button>
-
                     {/* Images */}
-                    {images.length > 0 ? images.map((img) => (
+                    {userProgressPics.length > 0 ? userProgressPics.map((img) => (removingPic !== null && removingPic === img.id) ? <ImageSkeleton key={img.id} /> : (
                         <div key={img.id} className="relative aspect-[4/5] group rounded-2xl overflow-hidden cursor-pointer bg-slate-800">
-                            <img src={img.url} alt={img.week} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                            <img src={img.url} alt={img.date} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
                             <div className="absolute bottom-4 left-4">
-                                <p className="text-white font-bold">{img.week}</p>
                                 <p className="text-xs text-slate-300">{img.date}</p>
                             </div>
+                            <button 
+                                onClick={() => handlePicRemoval(img.id)}
+                                className='w-[1.8rem] h-[1.8rem] flex items-center justify-center rounded-full p-[.4rem] absolute bottom-4 right-4 hover:bg-black'
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM9 11H11V17H9V11ZM13 11H15V17H13V11ZM9 4V6H15V4H9Z"></path></svg>
+                            </button>
                         </div>
                     )) : (
                         // Empty state helper text if no images
@@ -574,3 +651,9 @@ export const ProgressDashboard = () => {
         </div>
     );
 };
+
+const ImageSkeleton = () => {
+    return (<div className='relative aspect-[4/5] rounded-2xl bg-slate-800'>
+        <Loader2 className='absolute top-[50%] left-[45%] animate-spin w-7 h-7' />
+    </div>);
+}

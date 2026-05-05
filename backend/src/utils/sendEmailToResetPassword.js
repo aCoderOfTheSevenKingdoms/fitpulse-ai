@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const logger = require('./logger');
 
 const sendEmail = async (resetLink,email) => {
      
@@ -23,7 +24,7 @@ const sendEmail = async (resetLink,email) => {
         });
 
     } catch(error) {
-        console.error("Email couldn't be sent", error.message);
+        logger.error("Email couldn't be sent", error.message);
     }
 }
 

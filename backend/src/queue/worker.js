@@ -25,9 +25,14 @@ const worker = new Worker(
     "plan-generation",
     async (job) => {
 
-        const { userId, planId, inputData } = job.data;
+      const { userId, planId, inputData } = job.data;
 
       try {
+
+        const planDoc = await Plan.findById(planId);
+        if(!planDoc){
+          throw new Error(`Plan ${planId} not found. Aborting job`);
+        }
 
         console.log(`Processing plan: ${planId}`);
 
@@ -90,3 +95,13 @@ const worker = new Worker(
       } 
     }
 )
+
+worker.on("failed", async (job,err) => {
+  console.log(`Job ${job.id} failed: ${err.message}`);
+  if(job.attemptsMade >= job.opts.attempts){
+    await Plan.findByIdAndUpdate(job.data.planId, {
+      status: "failed",
+      error: err.message
+    });
+  }
+});

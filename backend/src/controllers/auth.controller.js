@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { sendEmail } = require('../utils/sendEmailToResetPassword');
+const logger = require('../utils/logger');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -18,7 +19,7 @@ const userCheck = async (req,res) => {
             user
         });
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ 
             message: 'Failed to fetch user' 
         });
@@ -68,10 +69,13 @@ const googleLogin = async (req, res) => {
         res.status(200).json({
             message: "Google Login Successful",
             isPasswordSet: user.isPasswordSet,
-            user
+            user: {
+                ...user,
+                memberSince: user.createdAt.toISOString().split('T')[0]
+            }
         });
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ 
             message: 'Failed to login with Google' 
         });
@@ -115,11 +119,14 @@ const userRegister = async (req,res) => {
         });
         res.status(201).json({
             message: "User registered successfully",
-            user: newUser
+            user: {
+                ...newUser,
+                memberSince: newUser.createdAt.toISOString().split('T')[0]
+            }
         });
      
     } catch(error){
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ 
             message: 'Failed to register user' 
         });
@@ -159,7 +166,7 @@ const userLogin = async (req,res) => {
             user
         });
     } catch(error){
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ 
             message: 'Failed to login user' 
         });
@@ -182,7 +189,7 @@ const setPassword = async (req,res) => {
         })
 
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ 
             message: 'Failed to set password' 
         });
@@ -194,7 +201,7 @@ const userLogout = (req,res) => {
         res.clearCookie('token');
         res.status(200).json({ message: "User logged out successfully" });
     } catch(error){
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ 
             message: 'Failed to logout user' 
         });
@@ -230,7 +237,7 @@ const forgotPassword = async (req,res) => {
 
     } catch(error) {
       
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).json("Some error occured while sending password reset link");
 
     }
@@ -269,7 +276,7 @@ const resetPassword = async (req,res) => {
 
     } catch(error) {
 
-        console.error("PASSSWORD RESET ERROR: ", error.message);
+        logger.error("PASSSWORD RESET ERROR: ", error.message);
         res.status(500).json({
             message: "Some error occured while password reset"
         })

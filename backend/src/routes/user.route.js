@@ -2,8 +2,34 @@ const express = require('express');
 
 const router = express.Router();
 
-router.get('/user/profile', (req,res) => {});
-router.patch('/user/profile', (req,res) => {});
-router.delete('/user/profile', (req,res) => {});
+// Middlewares
+const upload = require('../middlewares/imgUpload.middleware');
+const { authMiddleware } = require('../middlewares/auth.middleware');
+
+// Controllers
+const {
+    uploadAvatar,
+    removeAvatar,
+    updateProfile
+} = require('../controllers/user.controller');
+
+router.post(
+    '/upload-avatar', 
+    authMiddleware,
+    upload.single("image"), 
+    uploadAvatar
+);
+
+router.delete(
+    '/remove-avatar',
+    authMiddleware,
+    removeAvatar
+);
+
+router.patch(
+    '/update',
+    authMiddleware,
+    updateProfile
+)
 
 module.exports = router;

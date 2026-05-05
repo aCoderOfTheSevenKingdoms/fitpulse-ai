@@ -3,7 +3,13 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
     planId: null,
     activityDetails: null,
-    goals: [],
+    goalsById: {},
+    tabs: {
+        beginner: [],
+        intermediate: [],
+        advanced: []
+    },
+    activeTab: 'beginner'
 }
 
 const planSlice = createSlice({
@@ -16,22 +22,60 @@ const planSlice = createSlice({
         setActivityDetails: (state,action) => {
            state.activityDetails = action.payload;
         },
-        setGoals: (state,action) => {
-           state.goals = action.payload;
+        resetPlanState: (state,action) => {
+           state.goalsById = {};
+           state.tabs = { beginner: [], intermediate: [], advanced: [] }
         },
-        updateGoalProgress: (state,action) => {
-           state.goals = state.goals.map(goal =>
-                goal._id === action.payload.goalId
-                ? { ...goal, completedAt: action.payload.completedAt }
-                : goal
-            );
+        setGoalsForTab: (state, action) => {
+            const { tab, goals } = action.payload;
+
+            // 🛡️ ensure structure exists
+            if (!state.goalsById) state.goalsById = {};
+            if (!state.tabs) {
+                state.tabs = {
+                    beginner: [],
+                    intermediate: [],
+                    advanced: []
+                };
+            }
+
+            goals.forEach(goal => {
+                state.goalsById[goal._id] = goal;
+            });
+
+            state.tabs[tab] = goals.map(g => g._id);
         },
-        clearPlan: (state,action) => {
+        setActiveTab: (state, action) => {
+            state.activeTab = action.payload;
+        },
+        updateGoalProgress: (state, action) => {
+            const { goalId, completedAt } = action.payload;
+
+            if (state.goalsById[goalId]) {
+                state.goalsById[goalId].completedAt = completedAt;
+            }
+        },
+        clearPlan: (state) => {
+            state.planId = null;
             state.activityDetails = null;
-            state.goals = [];
+            state.goalsById = {};
+            state.tabs = {
+                beginner: [],
+                intermediate: [],
+                advanced: []
+            };
+            state.activeTab = "beginner";
         }
     }
 });
 
-export const { setActivityDetails, setGoals, updateGoalProgress, setPlanId } = planSlice.actions;
+export const { 
+    setActivityDetails, 
+    setGoalsForTab,
+    resetPlanState, 
+    updateGoalProgress, 
+    setActiveTab, 
+    setPlanId, 
+    clearPlan 
+} = planSlice.actions;
 export default planSlice.reducer;

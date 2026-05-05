@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../redux/features/userSlice";
+import { showSuccess, showError, showInfo } from '../utils/toast';
+import logger from '../utils/logger';
 
 const SetPasswordPage = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -56,10 +58,12 @@ const SetPasswordPage = () => {
                     ...user,
                     isPasswordSet: true
                 }));
+                showSuccess(res.data.message || "Password set successfully");
             })
             .catch((err) => {
                 setIsLoading(false);
-                setError(err.response?.data?.message || "Something went wrong");
+                logger.error(`[SET PASSWORD ERROR] ${err.response?.data?.message}`);
+                showError(err.response?.data?.message || "Something went wrong");
             })
     };
 

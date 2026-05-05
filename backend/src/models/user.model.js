@@ -29,6 +29,8 @@ const userSchema = new mongoose.Schema({
         // required: true,
         default: undefined
     },
+    height: Number,
+    weight: Number,
     gender: {
         type: String,
         // required: true,
@@ -47,19 +49,17 @@ const userSchema = new mongoose.Schema({
         default: ""
     },
     avatar: {
-        type: String,
-        required: true,
-        default: "https://ui-avatars.com/api/?name=John+Doe&background=random"
+        url: String, // Cloudinary URL
+        publicId: String // For delete/updation later
     },
     memberSince: {
         type: String,
         // required: true,
         default: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     },
-    isPro: {
-        type: Boolean,
-        // required: true,
-        default: false
+    streakCount: {
+        type: Number,
+        default: 0
     },
     isNewUser: {
         type: Boolean,
@@ -92,7 +92,14 @@ const userSchema = new mongoose.Schema({
         sparse: true
         // default: "",
         // unique: true
-    }
+    },
+    transformationPhotos: [
+        {
+            url: String,
+            publicId: String,
+            uploadedAt: String
+        }
+    ]
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

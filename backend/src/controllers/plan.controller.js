@@ -2,6 +2,7 @@
 const User = require('../models/user.model');
 const Plan = require('../models/plan.model');
 const { planQueue } = require('../queue/queue');
+const logger = require('../utils/logger');
 
 const generatePlan = async (req,res) => {
     
@@ -20,6 +21,14 @@ const generatePlan = async (req,res) => {
             return res.status(404).json({
                 message: "User not found"
             });
+        }
+
+        // Check if any workers are listening before queuing
+        const workers = await planQueue.getWorkers();
+        if(workers.length == 0){
+            return res.status(500).json({
+                message: "Plan Generation Failed"
+            })
         }
 
         /**
@@ -56,7 +65,7 @@ const generatePlan = async (req,res) => {
         })
 
     } catch(error) {
-        console.error(error.message);
+        logger.error(error);
         res.status(500).json({
             message: "Error while generating roadmap",
             err: error.message
@@ -66,6 +75,8 @@ const generatePlan = async (req,res) => {
 
 const getPlan = async (req, res) => {
     try {
+        const {start = 0, limit = 30} = req.query; 
+         
         const plan = await Plan.findById(req.params.planId);
 
         if (!plan) {
@@ -77,7 +88,8 @@ const getPlan = async (req, res) => {
         if (plan.status === "failed") {
             return res.json({
                 message: "Plan generation failed",
-                status: "failed"
+                status: "failed",
+                error: plan.error || "Some error occured"
             });
         }
 
@@ -85,7 +97,10 @@ const getPlan = async (req, res) => {
 
         if (plan.status === "completed") {
             const populatedPlan = await plan.populate("result");
-            goals = populatedPlan.result;
+            goals = populatedPlan.result.slice(
+                Number(start),
+                Number(start) + Number(limit)
+            )
         }
 
         return res.json({
@@ -94,6 +109,7 @@ const getPlan = async (req, res) => {
         });
 
     } catch (error) {
+        logger.error(error);
         return res.status(500).json({
             message: "Error fetching plan",
             error: error.message

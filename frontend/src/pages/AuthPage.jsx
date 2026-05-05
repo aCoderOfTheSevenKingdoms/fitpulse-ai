@@ -5,6 +5,8 @@ import { setUser } from '../redux/features/userSlice';
 import GoogleLogin from '../components/GoogleLogin';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import {showSuccess, showInfo, showError} from '../utils/toast';
+import logger from '../utils/logger';
 
 export const AuthPage = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -37,18 +39,20 @@ export const AuthPage = () => {
             .then((res) => {
                 dispatch(setUser(res.data.user));
                 setIsLoading(false);
+                showSuccess(res.data.message);
                 navigate("/");
             })
             .catch((err) => {
-                alert(err.response.data.message);
                 setIsLoading(false);
+                logger.error(`[AUTH ERROR] ${err.response?.data?.message}`);
+                showError(err.response?.data?.message || "Something went wrong while authentication");
             })
     };
 
     const handleForgotPassword = () => {
 
         if (!formData.email || formData.email.length === 0) {
-            alert("Please enter your email");
+            showError("Please enter your email");
             return;
         }
 
@@ -59,10 +63,11 @@ export const AuthPage = () => {
             { withCredentials: true }
         )
             .then((res) => {
-                alert(res.data.message);
+                showInfo(res.data.message || "A link has been sent to your email");
             })
             .catch((err) => {
-                alert(err.response?.data?.message || "Server Error");
+                logger.error(`[PASSWORD RESET ERROR] ${err.response?.data?.message}`);
+                showError(err.response?.data?.message || "Some error occured while sending link");
             })
 
     };

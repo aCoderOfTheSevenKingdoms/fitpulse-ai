@@ -5,6 +5,8 @@ import { onRoadmapGeneration } from '../redux/features/userSlice';
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
 import { setActivityDetails, setPlanId } from '../redux/features/planSlice';
+import {showInfo, showError} from '../utils/toast';
+import logger from '../utils/logger';
 
 export const RoadmapGenerator = () => {
     const [step, setStep] = useState(1);
@@ -76,7 +78,7 @@ export const RoadmapGenerator = () => {
 
     const handleSubmit = async () => {
         setIsLoading(true);
-        console.log('Submitting...', formData);
+        // console.log('Submitting...', formData);
 
         {/** Make API calls to generate AI roadmap */}
         axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/plan/generate-plan`, 
@@ -84,8 +86,8 @@ export const RoadmapGenerator = () => {
             { withCredentials: true }
         ).then((response) => {
             setIsLoading(false);
-            console.log('Usage: ', response.usage);
-            console.log('Response: ', response.data);
+            // console.log('Usage: ', response.usage);
+            // console.log('Response: ', response.data);
             const updatedUser = {
                 ...user,
                 hasHistory: true,
@@ -94,12 +96,13 @@ export const RoadmapGenerator = () => {
             dispatch(setActivityDetails(formData));
             dispatch(setPlanId(response.data.planId));
             dispatch(onRoadmapGeneration(updatedUser));
+            showInfo(response.data.message || "Plan Generation Initiated");
             navigate('/goals', { state: { isNewPlan: true } });
         })
         .catch((error) => {
             setIsLoading(false);
-            console.error('Error generating roadmap:', error);
-            alert('Failed to generate roadmap. Please try again.');
+            logger.error(`[PLAN GENERATION ERROR] ${error.message}`);
+            showError(error.response?.data?.message || 'Failed to generate roadmap. Please try again.');
         })
     };
 

@@ -17,7 +17,8 @@ const INITIAL_USER = {
 const initialState = {
     user: null,
     isAuthenticated: false,
-    loading: true
+    loading: true,
+    avatarUrl: null
 };
 
 const userSlice = createSlice({
@@ -32,6 +33,15 @@ const userSlice = createSlice({
         onRoadmapGeneration: (state, action) => {
             state.user = action.payload;
         },
+        onProfileUpdate: (state,action) => {
+            state.user = action.payload;
+        },
+        setAvatar: (state,action) => {
+            state.avatarUrl = action.payload;
+        },
+        removeAvatar: (state,action) => {
+            state.avatarUrl = null;
+        },
         clearUser: (state) => {
             state.user = null;
             state.isAuthenticated = false;
@@ -43,6 +53,15 @@ const userSlice = createSlice({
     },
 });
 
-export const { setUser, onRoadmapGeneration, clearUser, setLoading } = userSlice.actions;
+export const { 
+    setUser, 
+    onRoadmapGeneration,
+    onProfileUpdate, 
+    setAvatar, 
+    removeAvatar, 
+    clearUser, 
+    setLoading 
+} = userSlice.actions;
+
 export default userSlice.reducer;
 

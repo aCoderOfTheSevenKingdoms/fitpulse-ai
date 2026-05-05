@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Lock, ArrowRight, Activity, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from "axios";
+import {useSelector} from "react-redux";
+import {showSuccess, showError, showInfo} from '../utils/toast';
+import logger from '../utils/logger';
 
 const ResetPasswordPage = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -9,27 +12,25 @@ const ResetPasswordPage = () => {
         newPassword: '',
         confirmPassword: ''
     });
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
+    const [success, setSuccess] = useState(false);
+    const { isAuthenticated } = useSelector((state) => state.user);
     const { token } = useParams();
 
     const handleInputChange = (field, value) => {
         setPasswords(prev => ({ ...prev, [field]: value }));
-        setError(''); // Clear error on change
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        setError('');
 
         if (passwords.newPassword !== passwords.confirmPassword) {
-            setError("Passwords do not match");
+            showError("Passwords do not match");
             return;
         }
 
         if (passwords.newPassword.length < 8) {
-            setError("Password must be at least 8 characters");
+            showError("Password must be at least 8 characters");
             return;
         }
 
@@ -45,10 +46,12 @@ const ResetPasswordPage = () => {
             .then((res) => {
                 setIsLoading(false);
                 setSuccess(true);
+                showSuccess(res.data.message || "Password reset successful");
             })
             .catch((err) => {
                 setIsLoading(false);
-                setError(err.response?.data?.message || "Something went wrong");
+                logger.error(`[PASSWORD RESER ERROR] ${err.response?.data?.message}`);
+                showError(err.response?.data?.message || "Something went wrong");
             })
     };
 
@@ -70,10 +73,13 @@ const ResetPasswordPage = () => {
                     <h2 className="text-2xl font-bold text-white mb-2">Password Reset!</h2>
                     <p className="text-slate-400 mb-6">Your password has been successfully updated.</p>
                     <button
-                        onClick={() => navigate('/auth')}
+                        onClick={(isAuthenticated) => (isAuthenticated) ? navigate('/') : navigate('/auth')}
                         className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-all"
                     >
-                        Back to Login
+                        {isAuthenticated 
+                           ? "Go To Home"
+                           : "Back To Login" 
+                        }
                     </button>
                 </div>
             </div>
@@ -102,13 +108,6 @@ const ResetPasswordPage = () => {
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-8 pt-6 space-y-4">
-
-                    {error && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-400 text-sm">
-                            <XCircle className="w-5 h-5 flex-shrink-0" />
-                            {error}
-                        </div>
-                    )}
 
                     {/* New Password */}
                     <div className="relative group">

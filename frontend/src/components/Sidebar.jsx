@@ -1,16 +1,21 @@
 import React from 'react';
 import { Home, Map, Target, BarChart2, ShoppingBag, Activity, X, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { clearUser } from '../redux/features/userSlice';
 
 const NAV_ITEMS = [
     { path: '/', label: 'Home', icon: Home },
     { path: '/roadmap', label: 'Generate Roadmap', icon: Map },
     { path: '/goals', label: 'Daily Goals', icon: Target },
-    { path: '/dashboard', label: 'Progress Dashboard', icon: BarChart2 },
-    { path: '/shop', label: 'Shop', icon: ShoppingBag },
+    { path: '/dashboard', label: 'Progress Dashboard', icon: BarChart2 }
 ];
 
-export const Sidebar = ({ isOpen, setIsOpen, onLogout }) => {
+export const Sidebar = ({ isOpen, setIsOpen }) => {
+
+    const dispatch = useDispatch();
+
     return (
         <>
             {/* Mobile Overlay */}
@@ -32,7 +37,7 @@ export const Sidebar = ({ isOpen, setIsOpen, onLogout }) => {
                         <div className="bg-gradient-to-br from-cyan-500 to-blue-600 p-2 rounded-lg shadow-lg shadow-cyan-500/20">
                             <Activity className="w-6 h-6 text-white" />
                         </div>
-                        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                        <span className="text-xl font-bold text-white">
                             FitPulse AI
                         </span>
                         <button
@@ -71,17 +76,6 @@ export const Sidebar = ({ isOpen, setIsOpen, onLogout }) => {
                             );
                         })}
                     </nav>
-
-                    {/* User Profile Snippet (Bottom) */}
-                    <div className="p-4 border-t border-slate-800">
-                        <button
-                            onClick={onLogout}
-                            className="flex items-center w-full px-3 py-3 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition-colors"
-                        >
-                            <LogOut className="w-5 h-5 mr-3" />
-                            <span className="font-medium">Logout</span>
-                        </button>
-                    </div>
                 </div>
             </aside>
         </>

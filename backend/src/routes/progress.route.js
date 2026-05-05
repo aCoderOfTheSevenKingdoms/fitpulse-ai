@@ -7,16 +7,31 @@ const {
     progressInputValidation,
     checkDuplicateLogs
 } = require('../middlewares/progress.middleware');
+const upload = require('../middlewares/imgUpload.middleware');
 
 // Controllers
 const {
     progressLog,
-    todayProgress,
-    progressHistory
+    uploadTransformationPhoto,
+    deleteTransformationPic
 } = require('../controllers/progress.controller');
 
-router.post('/log', authMiddleware, checkDuplicateLogs, progressInputValidation, progressLog);
-router.get('/today', authMiddleware, todayProgress);
-router.get('/history', authMiddleware, progressHistory);
+router.post('/log', 
+    authMiddleware,  
+    checkDuplicateLogs, 
+    progressInputValidation, 
+    progressLog
+);
+
+router.post('/upload-pic', 
+    authMiddleware, 
+    upload.single("image"), 
+    uploadTransformationPhoto
+);
+
+router.delete('/delete-pic/:imgId', 
+    authMiddleware, 
+    deleteTransformationPic
+);
 
 module.exports = router;

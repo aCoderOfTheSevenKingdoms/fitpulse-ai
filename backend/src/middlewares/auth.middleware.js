@@ -1,6 +1,7 @@
 const { registerSchema, loginSchema } = require('./schema/auth.schema');
 const Redis = require('ioredis');
 const jwt = require("jsonwebtoken");
+const logger = require('../utils/logger');
 
 const redis = new Redis({
     host: process.env.REDIS_HOST,
@@ -8,7 +9,7 @@ const redis = new Redis({
 });
 
 redis.on('error', (err) => {
-    console.error('Redis error:', err);
+    logger.error('Redis error:', err);
 });
 
 function authMiddleware(req, res, next) {
