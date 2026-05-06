@@ -3,9 +3,9 @@ const dotenv = require('dotenv');
 dotenv.config();
 const logger = require('./src/utils/logger');
 
-logger.info(`REDIS_HOST: ${process.env.REDIS_HOST}`);
-logger.info(`REDIS_PORT: ${process.env.REDIS_PORT}`);
-logger.info(`REDIS_PASSWORD: ${process.env.REDIS_PASSWORD}`);
+console.log(`REDIS_HOST: ${process.env.REDIS_HOST}`);
+console.log(`REDIS_PORT: ${process.env.REDIS_PORT}`);
+console.log(`REDIS_PASSWORD: ${process.env.REDIS_PASSWORD}`);
 
 const app = require('./app');
 const connectDB = require('./src/config/DBconnection');
