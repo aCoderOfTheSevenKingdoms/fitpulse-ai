@@ -3,8 +3,9 @@ const Plan = require('../models/plan.model');
 const planGenerationLimiter = async (req,res,next) => {
     try {
 
-       const planDoc = await Plan.find({ 
-        userId: req.userId, 
+       const planDoc = await Plan.findOne({ 
+        userId: req.userId,
+        status: "completed"
        });
        if(planDoc) {
         return res.status(403).json({
@@ -14,7 +15,7 @@ const planGenerationLimiter = async (req,res,next) => {
        
        next();
 
-    } catch (error) {
+    } catch (error) { 
        res.status(500).json({
         message: "Internal server error"
        })

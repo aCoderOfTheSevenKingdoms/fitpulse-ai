@@ -1,12 +1,11 @@
-require("dotenv").config({
-  path: require("path").resolve(__dirname, "../../.env")
-});
+require("dotenv").config();
 
 const mongoose = require("mongoose");
+const logger = require('../utils/logger');
 
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("Worker DB connected ✅"))
-  .catch(err => console.error("Worker DB error ❌", err));
+  .then(() => logger.info("Worker DB connected ✅"))
+  .catch(err => logger.error(`Worker DB error ❌ ${err}`));
 
 const {Worker} = require("bullmq");
 
@@ -34,16 +33,16 @@ const worker = new Worker(
           throw new Error(`Plan ${planId} not found. Aborting job`);
         }
 
-        console.log(`Processing plan: ${planId}`);
+        logger.info(`Processing plan: ${planId}`);
 
          // Call PromptService to generate prompt
               const planPrompt = generatePrompt(inputData);
-              console.log("Prompt Generated");
+              logger.info("Prompt Generated");
               // Fetch roadmap api call
               const result = await computePlan(planPrompt);
       
               if (!result || !result.goals) {
-                console.error("LLM INVALID OUTPUT");
+                logger.error("LLM INVALID OUTPUT");
                 await Plan.findByIdAndUpdate(planId, {
                     status: "failed",
                     error: "LLM API FAILURE"
@@ -55,7 +54,7 @@ const worker = new Worker(
 
               // Set dates for each goal
               const goalsWithDates = generateGoalDates(goals);
-              console.log("Goals' dates generated successfully");
+              logger.info("Goals' dates generated successfully");
       
               // Store goals in DB
               const storedGoals = await Goal.insertMany(
@@ -66,16 +65,16 @@ const worker = new Worker(
               );
       
               if(!storedGoals || storedGoals.length !== 90){
-                console.error("GENERATED GOALS COULDN'T BE STORED IN DB");
+                logger.error("GENERATED GOALS COULDN'T BE STORED IN DB");
                 await Plan.findByIdAndUpdate(planId, {
                     status: "failed",
                     error: "ERROR WHILE STORING GOALS IN DB"
                 })
                 return;
               }
-              console.log("Goals stored successfully in DB");
+              logger.info("Goals stored successfully in DB");
 
-              console.log("ROADMAP GENERATED SUCCESSFULLY✅");
+              logger.info("ROADMAP GENERATED SUCCESSFULLY✅");
               await Plan.findByIdAndUpdate(planId, {
                 status: "completed",
                 result: storedGoals.map(goal => goal._id)
@@ -89,15 +88,18 @@ const worker = new Worker(
     },
     { 
       connection: {
-        host: "127.0.0.1",
-        port: 6379,
-        maxRetriesPerRequest: null
+        host: process.env.REDIS_HOST,
+        port: process.env.REDIS_PORT,
+        password: process.env.REDIS_PASSWORD,
+        tls: {},
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false
       } 
     }
 )
 
 worker.on("failed", async (job,err) => {
-  console.log(`Job ${job.id} failed: ${err.message}`);
+  logger.info(`Job ${job.id} failed: ${err.message}`);
   if(job.attemptsMade >= job.opts.attempts){
     await Plan.findByIdAndUpdate(job.data.planId, {
       status: "failed",

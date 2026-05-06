@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { 
     Activity,
     Flame, 
@@ -21,7 +21,7 @@ import {
 } from '../redux/features/planSlice';
 import { setProgressStats } from '../redux/features/progressSlice';
 import RoadmapGenerationLoader from '../components/RoadmapGenerationLoader';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '../utils/toast';
 import { GoalsList } from '../components/GoalsList';
 import GoalFilterTabs from '../components/GoalFilterTabs';
@@ -86,6 +86,8 @@ const getGoalStatus = (goal) => {
 export const DailyGoals = () => {
     const dispatch = useDispatch();
     const location = useLocation();
+    const navigate = useNavigate();
+    const hasHandledNewPlanRef = useRef(false);
 
     // From redux slices
     const { user } = useSelector((state) => state.user);
@@ -108,6 +110,7 @@ export const DailyGoals = () => {
     const [selectedGoal, setSelectedGoal] = useState(null);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isTabSwitching, setIsTabSwitching] = useState(false);
+    const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
     const [progressInput, setProgressInput] = useState({ 
       mealDescription: "",
       workoutDescription: "",
@@ -122,17 +125,23 @@ export const DailyGoals = () => {
       advanced: { start: 60, limit: 30 }
     };
 
-    const fetchGoalsByTab = async (tab) => {
-      try{
+    const fetchGoalsByTab = useCallback(async (tab, currentPlanId = planId, { showSkeleton = true } = {}) => {
+      if (!currentPlanId) return;
 
-        if(tabs[tab]?.length > 0) return;
-        
-        setIsTabSwitching(true);
+      try{
+        if (tabs[tab]?.length > 0) {
+          // Already have goals for this tab in Redux, no need to refetch
+          return;
+        }
+
+        if (showSkeleton) {
+          setIsTabSwitching(true);
+        }
 
         const {start, limit} = tabRanges[tab];
 
         const res = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/plan/get-plan/${planId}?start=${start}&limit=${limit}`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/plan/get-plan/${currentPlanId}?start=${start}&limit=${limit}`,
           {withCredentials: true}
         );
 
@@ -141,26 +150,74 @@ export const DailyGoals = () => {
 
         dispatch(setGoalsForTab({
           tab,
-          goals: res.data.goals
+          goals: Array.isArray(res.data.goals) ? res.data.goals : []
         }));
 
       } catch (error) {
         logger.error(error.message);
         showError("Some errr occured while fetching goals");
       } finally {
-        setIsTabSwitching(false);
+        if (showSkeleton) {
+          setIsTabSwitching(false);
+        }
       }
-    }
+    }, [dispatch, planId, tabs]);
 
     const handleTabChange = (tab) => {
       dispatch(setActiveTab(tab));
-      fetchGoalsByTab(tab);
+      // When user manually switches tab after goals exist,
+      // rely on Redux; fetch will no-op if data is already there.
+      fetchGoalsByTab(tab, planId, { showSkeleton: location.state?.isNewPlan === true });
     }
+
+    useEffect(() => {
+      let isMounted = true;
+
+      const loadInitialGoals = async () => {
+        try {
+          if (planId) {
+            // If we already have a planId (from redux-persist), don't show skeleton;
+            // fetch will only run if this tab has not been loaded yet.
+            await fetchGoalsByTab(activeTab, planId, { showSkeleton: false });
+            return;
+          }
+
+          setIsTabSwitching(true);
+          const { start, limit } = tabRanges.beginner;
+          const res = await axios.get(
+            `${import.meta.env.VITE_BACKEND_URL}/api/plan/get-plan/latest?start=${start}&limit=${limit}`,
+            { withCredentials: true }
+          );
+
+          if (!isMounted || res.data.status !== "completed") return;
+
+          dispatch(setPlanId(res.data.planId));
+          dispatch(setGoalsForTab({
+            tab: "beginner",
+            goals: Array.isArray(res.data.goals) ? res.data.goals : []
+          }));
+          dispatch(setActiveTab("beginner"));
+        } catch (error) {
+          logger.error(`[INITIAL GOALS FETCH ERROR] ${error.message}`);
+        } finally {
+          if (isMounted) {
+            setIsTabSwitching(false);
+            setIsInitialLoadDone(true);
+          }
+        }
+      };
+
+      loadInitialGoals();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [planId, activeTab, fetchGoalsByTab, dispatch]);
 
     // Poll every 2 seconds to getPlan api to get goals
     useEffect(() => {
 
-    if(!location.state?.isNewPlan) return;
+    if(!location.state?.isNewPlan || !planId || hasHandledNewPlanRef.current) return;
 
     let isMounted = true;
     setIsPlanGenerationPending(true);
@@ -176,18 +233,23 @@ export const DailyGoals = () => {
         if (!isMounted) return;
 
         if (res.data.status === "completed") {
+          hasHandledNewPlanRef.current = true;
           setIsPlanGenerationPending(false);
 
           dispatch(resetPlanState());
           // 👇 Fetch first tab data after completion
-          fetchGoalsByTab("beginner");
+          await fetchGoalsByTab("beginner", planId, { showSkeleton: false });
 
           showSuccess("Plan Generated Successfully");
+          navigate(location.pathname, { replace: true, state: {} });
           return;
         }
 
         if (res.data.status === "failed") {
+          hasHandledNewPlanRef.current = true;
+          setIsPlanGenerationPending(false);
           setError(true);
+          navigate(location.pathname, { replace: true, state: {} });
           return;
         }
 
@@ -205,7 +267,7 @@ export const DailyGoals = () => {
       isMounted = false;
     };
 
-  }, [planId]);
+  }, [planId, dispatch, fetchGoalsByTab, location.pathname, location.state?.isNewPlan, navigate]);
 
     // ----------------------
     // Goals Source (AI or fallback)
@@ -345,6 +407,19 @@ export const DailyGoals = () => {
       />)
     }
 
+    if (!isInitialLoadDone) {
+      return (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-24 rounded-2xl bg-slate-800 border border-slate-700 animate-pulse"
+            />
+          ))}
+        </div>
+      );
+    }
+
     if (!goals.length) return <EmptyGoalsState />;
 
     // ----------------------
@@ -396,18 +471,7 @@ export const DailyGoals = () => {
             <GoalFilterTabs activeTab={activeTab} onTabChange={handleTabChange} />
           </div>
           
-          {isTabSwitching ? (
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-24 rounded-2xl bg-slate-800 border border-slate-700 animate-pulse"
-                />
-              ))}
-            </div>
-          ) : (
-            <GoalsList goals={goals} handleAction={handleAction} />
-          )}
+          <GoalsList goals={goals} handleAction={handleAction} />
       
           {/* Detail / Update Modal */}
           {selectedGoal && (

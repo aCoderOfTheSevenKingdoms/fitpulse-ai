@@ -76,12 +76,24 @@ const generatePlan = async (req,res) => {
 const getPlan = async (req, res) => {
     try {
         const {start = 0, limit = 30} = req.query; 
-         
-        const plan = await Plan.findById(req.params.planId);
+        const { planId } = req.params;
+        let plan = null;
+
+        if (planId === "latest") {
+            plan = await Plan.findOne({ userId: req.userId }).sort({ createdAt: -1 });
+        } else {
+            plan = await Plan.findById(planId);
+        }
 
         if (!plan) {
             return res.status(404).json({
                 message: "Plan not found"
+            });
+        }
+
+        if (String(plan.userId) !== String(req.userId)) {
+            return res.status(403).json({
+                message: "Unauthorized access to plan"
             });
         }
 
@@ -104,6 +116,7 @@ const getPlan = async (req, res) => {
         }
 
         return res.json({
+            planId: plan._id,
             status: plan.status,
             goals
         });

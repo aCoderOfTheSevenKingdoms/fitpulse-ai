@@ -80,10 +80,10 @@ const computePlan = async (prompt) => {
     try {
 
         logger.info("Calling LLM");
-        const rawOutput = await llmAPIcall(prompt, 0.4, 1500);
+        const rawOutput = await llmAPIcall(prompt, 0.4, 8000);
         logger.info("LLM returned output");
 
-        logger.info("Raw length:", rawOutput?.length);
+        logger.info(`Raw length: ${rawOutput?.length}`);
 
         let cleanedOutput = rawOutput?.trim();
 
@@ -100,14 +100,14 @@ const computePlan = async (prompt) => {
         parsed = JSON.parse(cleanedOutput);
         logger.info("JSON parsed successfully ✅");
         } catch (err) {
-        logger.error("Parse failed ❌", err.message);
-        logger.info("Preview:", cleanedOutput.slice(0, 300));
+        logger.error(`Parse failed ❌ ${err.message}`);
+        logger.info(`Preview: ${cleanedOutput.slice(0, 300)}`);
         throw new Error("Invalid JSON output");
         }
 
-        logger.info("Type of goals:", typeof parsed.goals);
-        logger.info("Is array:", Array.isArray(parsed.goals));
-        logger.info("Goals length:", parsed.goals?.length);
+        logger.info(`Type of goals: ${typeof parsed.goals}`);
+        logger.info(`Is array: ${Array.isArray(parsed.goals)}`);
+        logger.info(`Goals length: ${parsed.goals?.length}`);
 
         // Validate
         if (!parsed.goals || parsed.goals.length !== 90) {
@@ -117,7 +117,7 @@ const computePlan = async (prompt) => {
         return parsed;
 
     } catch (error) {
-        logger.error("LLM API FAILURE:", error.message);
+        logger.error(`[LLM API FAILURE]: ${error.message}`);
         return null;
     }
 };
