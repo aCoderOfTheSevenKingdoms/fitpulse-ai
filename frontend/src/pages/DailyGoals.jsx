@@ -27,28 +27,6 @@ import { GoalsList } from '../components/GoalsList';
 import GoalFilterTabs from '../components/GoalFilterTabs';
 import logger from '../utils/logger';
 
-// Mock Data for "History" (Pre-filled for existing users)
-const HISTORY_GOALS = [
-    { day: 1, title: 'Warm-up Basics', description: 'Start with 10 mins of light jogging and dynamic stretching.', target: '15 mins', difficulty: 'Beginner', status: 'completed', calories: 120 },
-    { day: 2, title: 'Core Foundation', description: '3 sets of 30s planks and 20 crunches.', target: '3 sets', difficulty: 'Beginner', status: 'completed', calories: 150 },
-    { day: 3, title: 'Leg Day Starter', description: '40 squats and 20 lunges. Focus on form.', target: '60 reps total', difficulty: 'Beginner', status: 'completed', calories: 200 },
-    { day: 4, title: 'Push Strength', description: '3 sets of 10 pushups (knees allowed) and tricep dips.', target: '3 sets', difficulty: 'Intermediate', status: 'active', calories: 180 },
-    { day: 5, title: 'Cardio Blast', description: '20 mins of HIIT. 30s active, 30s rest.', target: '20 mins', difficulty: 'Intermediate', status: 'locked', calories: 300 },
-    { day: 6, title: 'Active Recovery', description: 'Yoga flow or light swimming.', target: '30 mins', difficulty: 'Beginner', status: 'locked', calories: 100 },
-    { day: 7, title: 'Full Body Challenge', description: 'Combine all previous movements into a circuit.', target: '45 mins', difficulty: 'Advanced', status: 'locked', calories: 400 },
-];
-
-// Mock Data for "New User" (Fresh start)
-const FRESH_GOALS = [
-    { day: 1, title: 'Introduction to Movement', description: 'Assess your mobility with basic stretches.', target: '10 mins', difficulty: 'Beginner', status: 'active', calories: 80 },
-    { day: 2, title: 'First Steps', description: 'Light cardio walk or jog.', target: '15 mins', difficulty: 'Beginner', status: 'locked', calories: 120 },
-    { day: 3, title: 'Bodyweight Basics', description: 'Squats and wall pushups.', target: '2 sets', difficulty: 'Beginner', status: 'locked', calories: 100 },
-    { day: 4, title: 'Core Engagement', description: 'Plank holds and bird-dogs.', target: '10 mins', difficulty: 'Beginner', status: 'locked', calories: 90 },
-    { day: 5, title: 'Recovery & Mobility', description: 'Full body foam rolling or stretching.', target: '20 mins', difficulty: 'Beginner', status: 'locked', calories: 50 },
-    { day: 6, title: 'Endurance Test', description: 'Steady state cardio.', target: '25 mins', difficulty: 'Intermediate', status: 'locked', calories: 200 },
-    { day: 7, title: 'Week 1 Challenge', description: 'Circuit of all learned movements.', target: '30 mins', difficulty: 'Intermediate', status: 'locked', calories: 250 },
-];
-
 
 // ----------------------
 // Helpers
