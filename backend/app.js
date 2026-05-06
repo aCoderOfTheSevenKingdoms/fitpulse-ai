@@ -11,8 +11,9 @@ const progressRoute = require('./src/routes/progress.route');
 
 const app = express();
 
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: [process.env.FRONTEND_URL, process.env.PREVIEW_FRONTEND_URL],
     credentials: true
 }));
 app.use(express.json());
