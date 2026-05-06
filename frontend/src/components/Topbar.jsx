@@ -11,7 +11,7 @@ export const Topbar = ({ onMenuClick, user }) => {
     return (
         <header className="sticky top-0 z-30 flex items-center h-16 px-4 lg:px-8 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
             <button
-                onClick={onMenuClick}
+                onClick={() => onMenuClick?.()}
                 className="p-2 mr-4 text-slate-400 hover:text-white lg:hidden"
             >
                 <Menu className="w-6 h-6" />

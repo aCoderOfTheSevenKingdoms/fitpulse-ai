@@ -95,7 +95,7 @@ export const HomePage = ({ user }) => {
                         Ready to crush your goals, {user?.name?.split(' ')[0] || "User"}?
                     </h1>
                     <p className="text-indigo-200 text-lg mb-6">
-                        {user.isNewUser
+                        {user?.isNewUser
                             ? "Welcome to FitPulse! Start by setting up your profile to get personalized recommendations."
                             : "Your AI coach has curated 3 new workout tips for you based on yesterday's performance."
                         }
@@ -127,7 +127,7 @@ export const HomePage = ({ user }) => {
                     <div>
                         <p className="text-slate-400 text-xs uppercase tracking-wider">Daily Streak</p>
                         <p className="text-xl font-bold text-white">
-                            {user.hasHistory === false ? '0 Days' : '12 Days'}
+                            {user?.hasHistory === false ? '0 Days' : '12 Days'}
                         </p>
                     </div>
                 </div>
@@ -138,8 +138,8 @@ export const HomePage = ({ user }) => {
                     <div>
                         <p className="text-slate-400 text-xs uppercase tracking-wider">Weight</p>
                         <p className="text-xl font-bold text-white">
-                            {user.weight ? `${user.weight} kg` : 'N/A'}
-                            {!user.isNewUser && user.weight && user.hasHistory !== false && <span className="text-xs text-emerald-500 ml-1">-0.5</span>}
+                            {user?.weight ? `${user?.weight} kg` : 'N/A'}
+                            {!user?.isNewUser && user?.weight && user?.hasHistory !== false && <span className="text-xs text-emerald-500 ml-1">-0.5</span>}
                         </p>
                     </div>
                 </div>

@@ -2,10 +2,11 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux"
 import { setUser, clearUser } from "../redux/features/userSlice";
 import axios from "axios";
+import logger from "../utils/logger";
 
 const AuthProvider = ({ children }) => {
     const dispatch = useDispatch();
-    const { loading } = useSelector((state) => state.user);
+    const { loading } = useSelector((state) => state.user || {});
 
     useEffect(() => {
        const fetchUser = async () => {
@@ -14,9 +15,9 @@ const AuthProvider = ({ children }) => {
                 `${import.meta.env.VITE_BACKEND_URL}/api/auth/me`,
                 {withCredentials: true}
             );
-            dispatch(setUser(response.data.user));
+            dispatch(setUser(response?.data?.user));
         } catch (error) {
-            console.error("Error fetching user:", error);
+            logger.error(`[AUTH PROVIDER ERROR] ${error?.message}`);
             dispatch(clearUser());
         }
        };

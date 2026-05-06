@@ -58,11 +58,19 @@ export const UserProfile = () => {
 
     const [activeTab, setActiveTab] = useState('settings');
     // Local state to manage form inputs before saving
-    const [formData, setFormData] = useState(user);
+    const [formData, setFormData] = useState(user || {});
     const [showSuccess, setShowSuccess] = useState(false);
 
     const fileInputRef = useRef(null);
     const dispatch = useDispatch();
+
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center h-full w-full">
+                <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     const handleLogout = async () => {
         await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, 
@@ -98,8 +106,8 @@ export const UserProfile = () => {
 
            const response = await uploadPromise;
 
-           if(response.status === 200 && response.data.avatar){
-            dispatch(setAvatar(response.data.avatar));
+           if(response?.status === 200 && response?.data?.avatar){
+            dispatch(setAvatar(response?.data?.avatar));
            }
 
            e.target.value = "";
@@ -114,7 +122,7 @@ export const UserProfile = () => {
             {withCredentials: true}
            );
            dispatch(removeAvatar());
-           showSuccess(response.data.message || "Profile pic removed");
+           showSuccess(response?.data?.message || "Profile pic removed");
         } catch (error) {
            logger.error(`[FILE DELETE ERROR] ${error.message}`);
            showError(error.message || "Some error occured while removing profile pic");
@@ -138,8 +146,8 @@ export const UserProfile = () => {
 
             const response = await uploadPromise;
 
-            if(response.status === 200 && response.data.user){
-                dispatch(onProfileUpdate(response.data.user));
+            if(response?.status === 200 && response?.data?.user){
+                dispatch(onProfileUpdate(response?.data?.user));
                 setShowSuccess(true);
             }
 
@@ -151,19 +159,19 @@ export const UserProfile = () => {
     const resetPasswordHandler = async () => {
         try {
          
-           if(!formData.email || formData.email.length === 0){
+           if(!formData?.email || formData?.email?.length === 0){
             showInfo("Please enter your email");
             return;
            } 
 
            const response = await axios.post(
             `${import.meta.env.VITE_BACKEND_URL}/api/auth/forgot-password`,
-            {email: formData.email},
+            {email: formData?.email},
             {withCredentials: true}
            );
 
-           if(response.status === 200){
-            showSuccess(response.data.message);
+           if(response?.status === 200){
+            showSuccess(response?.data?.message);
            }
         } catch (error) {
            logger.error(`[PASSWORD RESET ERROR] ${error.message}`);
@@ -187,7 +195,7 @@ export const UserProfile = () => {
                     <div className="relative group">
                         {avatarUrl
                             ? <div className="w-32 h-32 rounded-full border-4 border-slate-950     overflow-hidden bg-slate-800 shadow-2xl">
-                                <img src={avatarUrl} alt={formData.name} className="w-full h-full object-cover" />
+                                <img src={avatarUrl} alt={formData?.name ?? ''} className="w-full h-full object-cover" />
                             </div>
                             : <DefaultAvatar size={96} />
                         }
@@ -210,11 +218,11 @@ export const UserProfile = () => {
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                                    {formData.name}
+                                    {formData?.name ?? ''}
                                 </h1>
                                 <p className="text-slate-400 mt-1 flex items-center gap-2">
                                     <MapPin className="w-4 h-4" />
-                                    {formData.location} • Member since {formData.memberSince}
+                                    {formData?.location ?? ''} • Member since {formData?.memberSince ?? ''}
                                 </p>
                             </div>
                             <div className="flex gap-3">
@@ -294,7 +302,7 @@ export const UserProfile = () => {
                                             <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                             <input
                                                 type="text"
-                                                value={formData.name}
+                                                value={formData?.name ?? ''}
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
                                             />
@@ -306,7 +314,7 @@ export const UserProfile = () => {
                                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                             <input
                                                 type="email"
-                                                value={formData.email}
+                                                value={formData?.email ?? ''}
                                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
                                             />
@@ -318,7 +326,7 @@ export const UserProfile = () => {
                                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                             <input
                                                 type="password"
-                                                value={formData.password}
+                                                value={formData?.password ?? ''}
                                                 disabled
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
                                             />
@@ -336,7 +344,7 @@ export const UserProfile = () => {
                                             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                             <input
                                                 type="text"
-                                                value={formData.location}
+                                                value={formData?.location ?? ''}
                                                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
                                             />
@@ -354,7 +362,7 @@ export const UserProfile = () => {
                                             <input
                                                 type="number"
                                                 placeholder="e.g. 75"
-                                                value={formData.weight}
+                                                value={formData?.weight ?? ''}
                                                 onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
                                             />
@@ -367,7 +375,7 @@ export const UserProfile = () => {
                                             <input
                                                 type="number"
                                                 placeholder="e.g. 180"
-                                                value={formData.height}
+                                                value={formData?.height ?? ''}
                                                 onChange={(e) => setFormData({ ...formData, height: e.target.value })}
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
                                             />
@@ -378,7 +386,7 @@ export const UserProfile = () => {
                                 <div className="space-y-2 mb-8">
                                     <label className="text-sm font-medium text-slate-400">Bio</label>
                                     <textarea
-                                        value={formData.bio}
+                                        value={formData?.bio ?? ''}
                                         onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                                         className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all h-32 resize-none"
                                     />

@@ -26,11 +26,14 @@ import logger from '../utils/logger';
 // --- Chart Components ---
 
 const SimpleLineChart = ({ data, labels, color, maxValue }) => {
-    const max = maxValue || Math.max(...data) * 1.2 || 100;
+    const safeData = Array.isArray(data) ? data : [];
+    const safeLabels = Array.isArray(labels) ? labels : [];
+    const max = maxValue || Math.max(...safeData, 0) * 1.2 || 100;
 
     // Calculate points for SVG (0-100 coordinate space)
-    const points = data.map((val, i) => {
-        const x = (i / (data.length - 1)) * 100;
+    const points = safeData.map((val, i) => {
+        const denominator = Math.max(safeData.length - 1, 1);
+        const x = (i / denominator) * 100;
         const y = 100 - (val / max) * 100;
         return `${x},${y}`;
     }).join(' ');
@@ -63,8 +66,9 @@ const SimpleLineChart = ({ data, labels, color, maxValue }) => {
                 </svg>
 
                 {/* HTML Dots Overlay - prevents distortion */}
-                {data.map((val, i) => {
-                    const left = (i / (data.length - 1)) * 100;
+                {safeData.map((val, i) => {
+                    const denominator = Math.max(safeData.length - 1, 1);
+                    const left = (i / denominator) * 100;
                     const top = 100 - (val / max) * 100;
                     return (
                         <div
@@ -88,7 +92,7 @@ const SimpleLineChart = ({ data, labels, color, maxValue }) => {
                 })}
             </div>
             <div className="flex justify-between mt-3 px-1">
-                {labels.map((l, i) => (
+                {safeLabels.map((l, i) => (
                     <span key={i} className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{l}</span>
                 ))}
             </div>
@@ -97,12 +101,14 @@ const SimpleLineChart = ({ data, labels, color, maxValue }) => {
 };
 
 const SimpleBarChart = ({ data, labels, color, maxValue }) => {
-    const max = maxValue || Math.max(...data) * 1.1 || 100;
+    const safeData = Array.isArray(data) ? data : [];
+    const safeLabels = Array.isArray(labels) ? labels : [];
+    const max = maxValue || Math.max(...safeData, 0) * 1.1 || 100;
 
     return (
         <div className="flex flex-col h-full w-full">
             <div className="flex-1 flex items-end justify-between gap-2 min-h-[100px]">
-                {data.map((val, i) => {
+                {safeData.map((val, i) => {
                     const height = `${(val / max) * 100}%`;
                     return (
                         <div key={i} className="w-full bg-slate-800/50 rounded-t-sm relative group h-full flex items-end">
@@ -119,7 +125,7 @@ const SimpleBarChart = ({ data, labels, color, maxValue }) => {
                 })}
             </div>
             <div className="flex justify-between mt-3 px-1">
-                {labels.map((l, i) => (
+                {safeLabels.map((l, i) => (
                     <span key={i} className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{l}</span>
                 ))}
             </div>
@@ -127,7 +133,7 @@ const SimpleBarChart = ({ data, labels, color, maxValue }) => {
     );
 };
 
-const computeWeeklyMetrics = (weeklyStats) => {
+const computeWeeklyMetrics = (weeklyStats = []) => {
     let weeklyMetrics = {
         0: {
             day: 'Sun',
@@ -160,12 +166,13 @@ const computeWeeklyMetrics = (weeklyStats) => {
     }
 
     weeklyStats.forEach((statObj) => {
+        if (!weeklyMetrics?.[statObj?.day]) return;
         weeklyMetrics[statObj.day].hasLoggedProgress = true;
-        weeklyMetrics[statObj.day].caloriesBurnt = statObj.caloriesBurnt;
-        weeklyMetrics[statObj.day].sleepDuration = statObj.sleepDuration;
-        weeklyMetrics[statObj.day].proteinConsumption = statObj.proteinConsumption;
-        weeklyMetrics[statObj.day].workoutMinutes = statObj.workoutMinutes;
-        weeklyMetrics[statObj.day].dailySteps = statObj.dailySteps;
+        weeklyMetrics[statObj.day].caloriesBurnt = statObj?.caloriesBurnt;
+        weeklyMetrics[statObj.day].sleepDuration = statObj?.sleepDuration;
+        weeklyMetrics[statObj.day].proteinConsumption = statObj?.proteinConsumption;
+        weeklyMetrics[statObj.day].workoutMinutes = statObj?.workoutMinutes;
+        weeklyMetrics[statObj.day].dailySteps = statObj?.dailySteps;
     });
 
     let weeklyCaloriesBunt = []; 
@@ -212,8 +219,16 @@ export const ProgressDashboard = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
-    const { user } = useSelector((state) => state.user);
-    const { streakCount, effectivenessScore, weeklyStats, progressPics } = useSelector((state) => state.progress);
+    const { user } = useSelector((state) => state.user || {});
+    const { streakCount, effectivenessScore, weeklyStats, progressPics } = useSelector((state) => state.progress || {});
+
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center h-full w-full">
+                <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
     logger.log(`EFFECTIVENESS SCORE: ${effectivenessScore}`);
     logger.log(`USER'S STREAK: ${streakCount}`);
     logger.log(`WEEKLY STATS: ${weeklyStats}`);
@@ -276,8 +291,8 @@ export const ProgressDashboard = () => {
 
             const response = await uploadPromise;
 
-            if(response.status === 200 && response.data.photos){
-                const pics = response.data.photos?.map((pic) => {
+            if(response?.status === 200 && response?.data?.photos){
+                const pics = response?.data?.photos?.map((pic) => {
                     return {
                         id: pic._id,
                         date: pic.uploadedAt,
