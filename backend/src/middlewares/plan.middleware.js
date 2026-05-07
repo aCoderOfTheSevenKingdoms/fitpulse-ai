@@ -3,13 +3,13 @@ const Plan = require('../models/plan.model');
 const planGenerationLimiter = async (req,res,next) => {
     try {
 
-       const planDoc = await Plan.findOne({ 
+       const plans = await Plan.find({ 
         userId: req.userId,
         status: "completed"
        });
-       if(planDoc) {
+       if(plans.length === 2) {
         return res.status(403).json({
-            message: "Cannot generate more than one plan"
+            message: "Cannot generate more than two plans"
         })
        }
        
