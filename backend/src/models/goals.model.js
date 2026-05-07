@@ -15,6 +15,10 @@ const goalsScehma = new mongoose.Schema({
         workoutDuration: Number,
         steps: Number 
     },
+    isUpdated: {
+        type: Boolean,
+        default: false
+    },
     viewableFrom: Date,
     updatableFrom: Date,
     completedAt: Date

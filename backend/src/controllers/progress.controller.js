@@ -78,6 +78,7 @@ const progressLog = async (req,res) => {
         if(isCurrentGoalCompleted){
             currentGoal.completedAt = new Date(logDate);
         }
+        currentGoal.isUpdated = true;
         await currentGoal.save();
 
         // Update Daily progress model

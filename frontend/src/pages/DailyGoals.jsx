@@ -107,13 +107,13 @@ export const DailyGoals = () => {
       if (!currentPlanId) return;
 
       try{
+        if (showSkeleton && (tabs?.[tab]?.length ?? 0) === 0) {
+          setIsTabSwitching(true);
+        }
+
         if (tabs[tab]?.length > 0) {
           // Already have goals for this tab in Redux, no need to refetch
           return;
-        }
-
-        if (showSkeleton) {
-          setIsTabSwitching(true);
         }
 
         const {start, limit} = tabRanges[tab];
