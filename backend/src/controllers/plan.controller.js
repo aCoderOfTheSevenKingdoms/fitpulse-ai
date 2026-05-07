@@ -25,6 +25,7 @@ const generatePlan = async (req,res) => {
 
         // Check if any workers are listening before queuing
         const workers = await planQueue.getWorkers();
+        logger.error(`Workers Deployed: ${workers.length}`);
         if(workers.length == 0){
             return res.status(500).json({
                 message: "Plan Generation Failed"
