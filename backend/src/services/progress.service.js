@@ -290,7 +290,7 @@ const resetBrokenStreaks = async () => {
 
    // Find all the users who had an active streak (streakCount > 0)
    // but did not logged progress yesterday
-   const usersWithStreak = User.find({streakCount : {$gt: 0}});
+   const usersWithStreak = await User.find({streakCount : {$gt: 0}});
 
    for(const user of usersWithStreak){
     const yesterdayLog = await DailyProgress.findOne({
