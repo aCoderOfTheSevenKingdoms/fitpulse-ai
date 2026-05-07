@@ -15,6 +15,14 @@ export const RoadmapGenerator = () => {
     const { user } = useSelector((state) => state.user);
     const { activityDetails } = useSelector((state) => state.plan);
 
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center h-full w-full">
+                <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     const initialFormData = (user.isNewUser) ? {
         age: '',
         bmr: '',
@@ -42,9 +50,9 @@ export const RoadmapGenerator = () => {
         bloodPressureRange: '',
         cholestrol: '',
         medicalConditions: ''
-    } : activityDetails;
+    } : (activityDetails || {});
 
-    const [formData, setFormData] = useState(initialFormData);
+    const [formData, setFormData] = useState(initialFormData || {});
 
     const navigate = useNavigate();
 
@@ -94,9 +102,9 @@ export const RoadmapGenerator = () => {
                 isNewUser: false
             }
             dispatch(setActivityDetails(formData));
-            dispatch(setPlanId(response.data.planId));
+            dispatch(setPlanId(response?.data?.planId));
             dispatch(onRoadmapGeneration(updatedUser));
-            showInfo(response.data.message || "Plan Generation Initiated");
+            showInfo(response?.data?.message || "Plan Generation Initiated");
             navigate('/goals', { state: { isNewPlan: true } });
         })
         .catch((error) => {

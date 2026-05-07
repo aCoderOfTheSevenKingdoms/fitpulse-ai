@@ -79,7 +79,7 @@ export const DailyGoals = () => {
       advanced: []
     };
     const activeTab = planState?.activeTab || "beginner";
-    const { streakCount, weeklyStats } = useSelector((state) => state.progress);
+    const { streakCount, weeklyStats } = useSelector((state) => state.progress || {});
 
     // States
     const [isLoading, setIsLoading] = useState(false);
@@ -107,13 +107,13 @@ export const DailyGoals = () => {
       if (!currentPlanId) return;
 
       try{
+        if (showSkeleton && (tabs?.[tab]?.length ?? 0) === 0) {
+          setIsTabSwitching(true);
+        }
+
         if (tabs[tab]?.length > 0) {
           // Already have goals for this tab in Redux, no need to refetch
           return;
-        }
-
-        if (showSkeleton) {
-          setIsTabSwitching(true);
         }
 
         const {start, limit} = tabRanges[tab];
@@ -124,11 +124,11 @@ export const DailyGoals = () => {
         );
 
         logger.log("TAB: ", tab);
-        logger.log("API response: ", res.data.goals);
+        logger.log("API response: ", res?.data?.goals);
 
         dispatch(setGoalsForTab({
           tab,
-          goals: Array.isArray(res.data.goals) ? res.data.goals : []
+          goals: Array.isArray(res?.data?.goals) ? res?.data?.goals : []
         }));
 
       } catch (error) {
@@ -167,12 +167,12 @@ export const DailyGoals = () => {
             { withCredentials: true }
           );
 
-          if (!isMounted || res.data.status !== "completed") return;
+          if (!isMounted || res?.data?.status !== "completed") return;
 
-          dispatch(setPlanId(res.data.planId));
+          dispatch(setPlanId(res?.data?.planId));
           dispatch(setGoalsForTab({
             tab: "beginner",
-            goals: Array.isArray(res.data.goals) ? res.data.goals : []
+            goals: Array.isArray(res?.data?.goals) ? res?.data?.goals : []
           }));
           dispatch(setActiveTab("beginner"));
         } catch (error) {
@@ -210,7 +210,7 @@ export const DailyGoals = () => {
 
         if (!isMounted) return;
 
-        if (res.data.status === "completed") {
+        if (res?.data?.status === "completed") {
           hasHandledNewPlanRef.current = true;
           setIsPlanGenerationPending(false);
 
@@ -223,7 +223,7 @@ export const DailyGoals = () => {
           return;
         }
 
-        if (res.data.status === "failed") {
+        if (res?.data?.status === "failed") {
           hasHandledNewPlanRef.current = true;
           setIsPlanGenerationPending(false);
           setError(true);
@@ -357,13 +357,13 @@ export const DailyGoals = () => {
             // ----------------------
             dispatch(updateGoalProgress({
               goalId: selectedGoal.id,
-              completedAt: response.data.completedAt
+              completedAt: response?.data?.completedAt
             }));
 
             dispatch(setProgressStats({
-              streakCount: response.data.streakCount,
-              effectivenessScore: response.data.effectivenessScore,
-              weeklyStats: response.data.weeklyStats || []
+              streakCount: response?.data?.streakCount,
+              effectivenessScore: response?.data?.effectivenessScore,
+              weeklyStats: response?.data?.weeklyStats || []
             }))
 
             showSuccess("Progress logged successfully");
@@ -481,7 +481,7 @@ export const DailyGoals = () => {
                     <p className="text-xs text-slate-500 uppercase font-bold mb-1">
                       METRICS
                     </p>
-                    {Object.keys(selectedGoal.targets).map((key) => {
+                    {Object.keys(selectedGoal?.targets || {}).map((key) => {
                       return <p key={key} className="text-lg font-mono text-cyan-400">{key}</p>;
                     })}
                   </div>
@@ -490,7 +490,7 @@ export const DailyGoals = () => {
                     <p className="text-xs text-slate-500 uppercase font-bold mb-1">
                       TARGETS
                     </p>
-                    {Object.values(selectedGoal.targets).map((value) => {
+                    {Object.values(selectedGoal?.targets || {}).map((value) => {
                       return <p key={value} className="text-lg font-mono text-orange-400">{value}</p>;
                     })}
                   </div>

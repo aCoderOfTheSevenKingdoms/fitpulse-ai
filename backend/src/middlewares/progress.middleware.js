@@ -29,7 +29,10 @@ const checkDuplicateLogs = async (req,res,next) => {
         const userId = req.userId;
         const logDate = new Date().toISOString().split('T')[0];
 
-        const existingLog = await DailyProgress.findOne({ userId, date: logDate });
+        const existingLog = await DailyProgress.findOne({ 
+            userId, 
+            date: logDate
+        });
 
         if(existingLog){
             return res.json({

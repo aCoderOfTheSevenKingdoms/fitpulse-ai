@@ -37,9 +37,9 @@ export const AuthPage = () => {
             formData,
             { withCredentials: true })
             .then((res) => {
-                dispatch(setUser(res.data.user));
+                dispatch(setUser(res?.data?.user));
                 setIsLoading(false);
-                showSuccess(res.data.message);
+                showSuccess(res?.data?.message);
                 navigate("/");
             })
             .catch((err) => {
@@ -63,7 +63,7 @@ export const AuthPage = () => {
             { withCredentials: true }
         )
             .then((res) => {
-                showInfo(res.data.message || "A link has been sent to your email");
+                showInfo(res?.data?.message || "A link has been sent to your email");
             })
             .catch((err) => {
                 logger.error(`[PASSWORD RESET ERROR] ${err.response?.data?.message}`);

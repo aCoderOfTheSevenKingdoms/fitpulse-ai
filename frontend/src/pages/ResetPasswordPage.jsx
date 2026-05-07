@@ -14,7 +14,7 @@ const ResetPasswordPage = () => {
     });
     const navigate = useNavigate();
     const [success, setSuccess] = useState(false);
-    const { isAuthenticated } = useSelector((state) => state.user);
+    const { isAuthenticated } = useSelector((state) => state.user || {});
     const { token } = useParams();
 
     const handleInputChange = (field, value) => {
@@ -46,7 +46,7 @@ const ResetPasswordPage = () => {
             .then((res) => {
                 setIsLoading(false);
                 setSuccess(true);
-                showSuccess(res.data.message || "Password reset successful");
+                showSuccess(res?.data?.message || "Password reset successful");
             })
             .catch((err) => {
                 setIsLoading(false);

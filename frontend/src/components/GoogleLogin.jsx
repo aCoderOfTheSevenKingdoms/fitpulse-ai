@@ -56,15 +56,20 @@ const GoogleLogin = () => {
 
     // SEND THE TOKEN RECEIVED FROM GOOGLE TO THE BACKEND
     function handleCredentialResponse(response) {
-        const idToken = response.credential;
+        const idToken = response?.credential;
+        if (!idToken) {
+            logger.error("[GOOGLE OAUTH ERROR] Missing credential token");
+            showError("Failed to login with Google");
+            return;
+        }
         axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/google`,
             { idToken },
             { withCredentials: true })
             .then(response => {
                 // console.log(response.data);
-                dispatch(setUser(response.data.user));
-                if (response.data.isPasswordSet) {
-                    showSuccess(response.data.message || "Logged in successfully");
+                dispatch(setUser(response?.data?.user));
+                if (response?.data?.isPasswordSet) {
+                    showSuccess(response?.data?.message || "Logged in successfully");
                     navigate("/");
                 } else {
                     showInfo("Please set your password");

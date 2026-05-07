@@ -21,7 +21,7 @@ const SetPasswordPage = () => {
     const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    const {user} = useSelector((state) => state.user);
+    const {user} = useSelector((state) => state.user || {});
 
     const handleInputChange = (field, value) => {
         setPasswords(prev => ({ ...prev, [field]: value }));
@@ -58,7 +58,7 @@ const SetPasswordPage = () => {
                     ...user,
                     isPasswordSet: true
                 }));
-                showSuccess(res.data.message || "Password set successfully");
+                showSuccess(res?.data?.message || "Password set successfully");
             })
             .catch((err) => {
                 setIsLoading(false);
