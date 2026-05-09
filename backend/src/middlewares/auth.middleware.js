@@ -43,7 +43,7 @@ function validateSignupMiddleware(req, res, next) {
         if (!parsed.success) {
             res.status(400).json({
                 success: false,
-                message: "Invalid input",
+                message: parsed.error.issues?.[0]?.message || "Invalid input",
                 errors: parsed.error.issues
             });
             return;
@@ -66,7 +66,7 @@ function validateLoginMiddleware(req, res, next) {
         if (!parsed.success) {
             res.status(400).json({
                 success: false,
-                message: "Invalid input",
+                message: parsed.error.issues?.[0]?.message || "Invalid input",
                 errors: parsed.error.issues
             });
             return;

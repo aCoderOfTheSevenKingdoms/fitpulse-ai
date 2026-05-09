@@ -10,7 +10,6 @@ import { DailyGoals } from './src/pages/DailyGoals';
 import { ProgressDashboard } from './src/pages/ProgressDashboard';
 import { UserProfile } from './src/pages/UserProfile';
 import { AuthPage } from './src/pages/AuthPage';
-import SetPasswordPage from './src/pages/SetPasswordPage';
 import ResetPasswordPage from './src/pages/ResetPasswordPage';
 import { HomePage } from './src/pages/HomePage';
 import { useDispatch, useSelector } from 'react-redux';
@@ -81,8 +80,6 @@ function App() {
                         <Route path="/auth" element={<AuthPage />} />
                         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
                     </Route>
-
-                    <Route path='/set-password' element={<SetPasswordPage />} />
 
                     {/* Protected */}
                     <Route element={<ProtectedRoute />}>

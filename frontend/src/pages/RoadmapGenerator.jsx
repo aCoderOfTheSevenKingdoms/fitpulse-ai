@@ -109,8 +109,10 @@ export const RoadmapGenerator = () => {
         })
         .catch((error) => {
             setIsLoading(false);
-            logger.error(`[PLAN GENERATION ERROR] ${error.message}`);
-            showError(error.response?.data?.message || 'Failed to generate roadmap. Please try again.');
+            const data = error.response?.data;
+            const errorMessage = data?.errors?.[0]?.message || data?.message || 'Failed to generate roadmap. Please try again.';
+            logger.error(`[PLAN GENERATION ERROR] ${errorMessage}`);
+            showError(errorMessage);
         })
     };
 

@@ -113,7 +113,7 @@ const getPlan = async (req, res) => {
             goals = populatedPlan.result.slice(
                 Number(start),
                 Number(start) + Number(limit)
-            )
+            ).map((goal) => goal.toObject())
         }
 
         return res.json({

@@ -20,10 +20,6 @@ const userSchema = new mongoose.Schema({
         },
         minLength: 8
     },
-    isPasswordSet: {
-        type: Boolean,
-        default: false
-    },
     age: {
         type: Number,
         // required: true,
@@ -55,7 +51,7 @@ const userSchema = new mongoose.Schema({
     memberSince: {
         type: String,
         // required: true,
-        default: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        default: () => new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     },
     streakCount: {
         type: Number,

@@ -34,7 +34,10 @@ export const AuthPage = () => {
 
         // Send data to backend and update user state
         axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/${isLogin ? 'login' : 'register'}`,
-            formData,
+            {
+                ...formData,
+                age: formData.age === '' ? undefined : formData.age,
+            },
             { withCredentials: true })
             .then((res) => {
                 dispatch(setUser(res?.data?.user));
@@ -44,8 +47,10 @@ export const AuthPage = () => {
             })
             .catch((err) => {
                 setIsLoading(false);
-                logger.error(`[AUTH ERROR] ${err.response?.data?.message}`);
-                showError(err.response?.data?.message || "Something went wrong while authentication");
+                const data = err.response?.data;
+                const errorMessage = data?.errors?.[0]?.message || data?.message || "Something went wrong while authentication";
+                logger.error(`[AUTH ERROR] ${errorMessage}`);
+                showError(errorMessage);
             })
     };
 
@@ -66,8 +71,10 @@ export const AuthPage = () => {
                 showInfo(res?.data?.message || "A link has been sent to your email");
             })
             .catch((err) => {
-                logger.error(`[PASSWORD RESET ERROR] ${err.response?.data?.message}`);
-                showError(err.response?.data?.message || "Some error occured while sending link");
+                const data = err.response?.data;
+                const errorMessage = data?.errors?.[0]?.message || data?.message || "Some error occured while sending link";
+                logger.error(`[PASSWORD RESET ERROR] ${errorMessage}`);
+                showError(errorMessage);
             })
 
     };

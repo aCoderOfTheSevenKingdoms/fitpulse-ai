@@ -10,15 +10,6 @@ const ProtectedRoute = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Logged in but password not set
-  if (
-    user &&
-    !user.isPasswordSet &&
-    location.pathname !== "/set-password"
-  ) {
-    return <Navigate to="/set-password" replace />;
-  }
-
   return <Outlet />;
 };
 

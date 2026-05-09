@@ -196,7 +196,7 @@ const uploadTransformationPhoto = async (req,res) => {
 
     res.status(200).json({
         message: "Tranformation photo uploaded✅",
-        photos: userDoc.transformationPhotos
+        photos: userDoc.transformationPhotos.map((photo) => photo.toObject())
     })
 
    } catch (error) {
@@ -218,6 +218,11 @@ const deleteTransformationPic = async (req,res) => {
     }
 
     const userDoc = await User.findById(req.userId);
+    if(!userDoc){
+        return res.status(404).json({
+            message: "User not found"
+        });
+    }
     
     const imgObj = userDoc.transformationPhotos.find(
         (pic) => pic._id.toString() === imgId

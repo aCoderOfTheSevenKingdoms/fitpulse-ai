@@ -14,7 +14,6 @@ const {
     userCheck,
     userRegister,
     userLogin,
-    setPassword,
     userLogout,
     forgotPassword,
     resetPassword 
@@ -26,7 +25,6 @@ router.get('/me', authMiddleware, userCheck);
 router.post('/register', validateSignupMiddleware, userRegister);
 router.post('/login', validateLoginMiddleware, userLogin);
 router.post('/google', googleLogin);
-router.post('/set-password', authMiddleware, setPassword);
 router.post('/logout', authMiddleware, userLogout);
 router.post('/forgot-password', rateLimitAuthMiddleware, forgotPassword);
 router.post('/reset-password/:token', resetPassword);

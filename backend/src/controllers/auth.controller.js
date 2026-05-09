@@ -16,7 +16,10 @@ const userCheck = async (req,res) => {
         }
         res.status(200).json({
             message: "User fetched successfully",
-            user
+            user: {
+                ...user.toObject(),
+                memberSince: user.createdAt.toISOString().split('T')[0]
+            }
         });
     } catch (error) {
         logger.error(error);
@@ -49,8 +52,7 @@ const googleLogin = async (req, res) => {
                 name,
                 avatar: picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
                 provider: 'google',
-                providerId: sub,
-                isPasswordSet: false
+                providerId: sub
             });
         }
     
@@ -68,9 +70,8 @@ const googleLogin = async (req, res) => {
         });
         res.status(200).json({
             message: "Google Login Successful",
-            isPasswordSet: user.isPasswordSet,
             user: {
-                ...user,
+                ...user.toObject(),
                 memberSince: user.createdAt.toISOString().split('T')[0]
             }
         });
@@ -100,7 +101,6 @@ const userRegister = async (req,res) => {
             name,
             email,
             password: hashedPassword,
-            isPasswordSet: true,
             age,
             gender,
             provider: 'email',
@@ -120,7 +120,7 @@ const userRegister = async (req,res) => {
         res.status(201).json({
             message: "User registered successfully",
             user: {
-                ...newUser,
+                ...newUser.toObject(),
                 memberSince: newUser.createdAt.toISOString().split('T')[0]
             }
         });
@@ -145,6 +145,10 @@ const userLogin = async (req,res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
+        if (user.provider === "google" || !user.password) {
+            return res.status(400).json({ message: "This account uses Google sign-in. Please continue with Google." });
+        }
+
         const isPasswordValid = await bcrypt.compare(password, user.password);
         
         if(!isPasswordValid){
@@ -163,35 +167,15 @@ const userLogin = async (req,res) => {
         });
         res.status(200).json({
             message: "User logged in successfully",
-            user
+            user: {
+                ...user.toObject(),
+                memberSince: user.createdAt.toISOString().split('T')[0]
+            }
         });
     } catch(error){
         logger.error(error);
         res.status(500).json({ 
             message: 'Failed to login user' 
-        });
-    }
-}
-
-const setPassword = async (req,res) => {
-    const { password } = req.body;
-    try{
-
-        const user = await User.findById(req.userId);
-        if(!user){
-            return res.status(404).json({ message: "User not found" });
-        }
-        user.password = await bcrypt.hash(password, 10);
-        user.isPasswordSet = true;
-        await user.save();
-        res.status(200).json({
-            message: "Password set successfully"
-        })
-
-    } catch (error) {
-        logger.error(error);
-        res.status(500).json({ 
-            message: 'Failed to set password' 
         });
     }
 }
@@ -290,7 +274,6 @@ module.exports = {
     userCheck,
     userRegister,
     userLogin,
-    setPassword,
     userLogout,
     forgotPassword,
     resetPassword

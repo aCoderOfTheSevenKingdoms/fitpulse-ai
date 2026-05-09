@@ -50,8 +50,10 @@ const ResetPasswordPage = () => {
             })
             .catch((err) => {
                 setIsLoading(false);
-                logger.error(`[PASSWORD RESER ERROR] ${err.response?.data?.message}`);
-                showError(err.response?.data?.message || "Something went wrong");
+                const data = err.response?.data;
+                const errorMessage = data?.errors?.[0]?.message || data?.message || "Something went wrong";
+                logger.error(`[PASSWORD RESER ERROR] ${errorMessage}`);
+                showError(errorMessage);
             })
     };
 

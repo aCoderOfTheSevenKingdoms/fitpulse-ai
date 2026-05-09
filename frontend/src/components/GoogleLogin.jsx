@@ -68,17 +68,14 @@ const GoogleLogin = () => {
             .then(response => {
                 // console.log(response.data);
                 dispatch(setUser(response?.data?.user));
-                if (response?.data?.isPasswordSet) {
-                    showSuccess(response?.data?.message || "Logged in successfully");
-                    navigate("/");
-                } else {
-                    showInfo("Please set your password");
-                    navigate("/set-password");
-                }
+                showSuccess(response?.data?.message || "Logged in successfully");
+                navigate("/");
             })
             .catch(error => {
-                logger.error(`[GOOGLE OAUTH ERROR] ${error.response?.data?.message}`);
-                showError(error.response?.data?.message || "Failed to login with Google");
+                const data = error.response?.data;
+                const errorMessage = data?.errors?.[0]?.message || data?.message || "Failed to login with Google";
+                logger.error(`[GOOGLE OAUTH ERROR] ${errorMessage}`);
+                showError(errorMessage);
             });
     }
 

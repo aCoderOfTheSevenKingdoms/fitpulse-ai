@@ -8,7 +8,8 @@ const progressInputValidation = (req,res,next) => {
         const parsedPayload = progressInputSchema.safeParse(payload);
         if(!parsedPayload.success){
             return res.status(400).json({
-                message: "Invalid Inputs"
+                message: parsedPayload.error.issues?.[0]?.message || "Invalid input",
+                errors: parsedPayload.error.issues
             });
         }
         next();

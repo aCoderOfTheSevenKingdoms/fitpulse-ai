@@ -29,6 +29,10 @@ const uploadAvatar = async (req,res) => {
         { new: true }
         );
 
+        if (!user) {
+        return res.status(404).json({ message: "User not found" });
+        }
+
         res.status(200).json({
         message: "Avatar uploaded successfully",
         avatar: user.avatar,
@@ -103,7 +107,7 @@ const updateProfile = async (req,res) => {
 
     res.status(200).json({
       message: "User info updated successfully✅",
-      user: updatedUser
+      user: updatedUser.toObject()
     })
 
   } catch (error) {
