@@ -24,6 +24,7 @@ import { setAvatar, onProfileUpdate, removeAvatar, clearUser } from '../redux/fe
 import axios from 'axios';
 import {showError, showSuccess, showPromise, showInfo} from '../utils/toast';
 import logger from '../utils/logger';
+import {persistor} from '../redux/store';
 
 // --- Mock Data ---
 
@@ -77,6 +78,7 @@ export const UserProfile = () => {
             {},
             { withCredentials: true });
         dispatch(clearUser());
+        await persistor.purge(); // Clear all persisted storage
         navigate('/auth');
     };
 
