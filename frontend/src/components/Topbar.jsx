@@ -17,24 +17,8 @@ export const Topbar = ({ onMenuClick, user }) => {
                 <Menu className="w-6 h-6" />
             </button>
 
-            {/* Search Bar */}
-            <div className="flex-1 max-w-xl">
-                <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Search for workouts, nutrition tips..."
-                        className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-full text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
-                    />
-                </div>
-            </div>
-
             {/* Right Actions */}
             <div className="flex items-center ml-auto gap-2 sm:gap-4">
-                <button className="relative p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors">
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-900"></span>
-                    <Bell className="w-5 h-5" />
-                </button>
 
                 <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors">
                     <Bookmark className="w-5 h-5" />

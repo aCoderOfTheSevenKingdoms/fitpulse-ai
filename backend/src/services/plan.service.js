@@ -80,7 +80,7 @@ const computePlan = async (prompt) => {
     try {
 
         logger.info("Calling LLM");
-        const rawOutput = await llmAPIcall(prompt, 0.4, 8000);
+        const rawOutput = await llmAPIcall(prompt, 0.4, 6000);
         logger.info("LLM returned output");
 
         logger.info(`Raw length: ${rawOutput?.length}`);

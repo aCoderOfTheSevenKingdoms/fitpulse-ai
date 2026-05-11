@@ -3,7 +3,6 @@ const express = require('express');
 // Middlewares
 const { 
     authMiddleware,
-    rateLimitAuthMiddleware, 
     validateSignupMiddleware, 
     validateLoginMiddleware,  
 } = require('../middlewares/auth.middleware');
@@ -26,7 +25,7 @@ router.post('/register', validateSignupMiddleware, userRegister);
 router.post('/login', validateLoginMiddleware, userLogin);
 router.post('/google', googleLogin);
 router.post('/logout', authMiddleware, userLogout);
-router.post('/forgot-password', rateLimitAuthMiddleware, forgotPassword);
+router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 
 module.exports = router;

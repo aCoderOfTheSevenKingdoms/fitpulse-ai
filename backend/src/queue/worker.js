@@ -91,7 +91,6 @@ const worker = new Worker(
         host: process.env.REDIS_HOST,
         port: process.env.REDIS_PORT,
         password: process.env.REDIS_PASSWORD,
-        tls: {},
         maxRetriesPerRequest: null,
         enableReadyCheck: false
       } 

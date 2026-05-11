@@ -52,7 +52,7 @@ const removeAvatar = async (req,res) => {
         })
       } 
 
-      if(!userDoc.avatar){
+      if(userDoc.avatar === null){
         return res.json({
             message: "No avatar uploaded"
         })

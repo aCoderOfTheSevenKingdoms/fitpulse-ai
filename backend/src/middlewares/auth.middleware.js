@@ -1,18 +1,6 @@
 const { registerSchema, loginSchema } = require('./schema/auth.schema');
-const Redis = require('ioredis');
 const jwt = require("jsonwebtoken");
 const logger = require('../utils/logger');
-
-const redis = new Redis({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT,
-    password: process.env.REDIS_PASSWORD,
-    tls: {}
-});
-
-redis.on('error', (err) => {
-    logger.error('Redis error:', err);
-});
 
 function authMiddleware(req, res, next) {
     try {
@@ -82,29 +70,6 @@ function validateLoginMiddleware(req, res, next) {
     }
 }
 
-async function rateLimitAuthMiddleware(req, res, next) {
-    try {
-        const ip = req.ip;
-        const key = `rate_limit:${ip}`;
-        const count = await redis.get(key);
-        if (count) {
-            res.status(429).json({
-                success: false,
-                message: "Too many requests"
-            });
-            return;
-        }
-        await redis.set(key, 1, "EX", 60);
-        next();
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Internal server error",
-            error: error.message
-        });
-    }
-}
-
 function errorHandlerMiddleware(req, res, next) {
     try {
         res.status(500).json({
@@ -121,6 +86,5 @@ module.exports = {
     authMiddleware,
     validateSignupMiddleware,
     validateLoginMiddleware,
-    rateLimitAuthMiddleware,
     errorHandlerMiddleware
 };
